@@ -1,0 +1,13 @@
+model/*
+output/*
+
+*.pth
+*.pyc
+*.pt
+*.mp4
+src/ControlNet
+src/ControlNet/*
+src/ebsynth
+src/ebsynth/*
+
+.DS_Store

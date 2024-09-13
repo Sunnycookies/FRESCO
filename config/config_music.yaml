@@ -1,0 +1,51 @@
+# data
+file_path: './data/music.mp4'
+save_path: './output/test_tokenflow/music/woman/sdedit/20/test_warp_perframe/'
+mininterv: 1 # for keyframe selection
+maxinterv: 1 # for keyframe selection
+
+# diffusion
+seed: 0
+prompt: 'A beautiful woman with headphones listening to music in CG cyberpunk style, neon, closed eyes, colorful'
+sd_path: 'stablediffusionapi/rev-animated' 
+use_controlnet: True
+controlnet_type: 'hed'  # 'depth', 'canny'
+cond_scale: 0.7
+use_freeu: False
+
+# video-to-video translation 
+batch_size: 4
+num_inference_steps: 20
+num_warmup_steps: 3
+end_opt_step: 15 
+run_ebsynth: False
+max_process: 4
+#===================== add
+use_inv_noise: True
+inv_latent_path: '/home/color/fresco2/latents/music/latents/'
+#=====================
+
+# supporting model
+gmflow_path: './model/gmflow_sintel-0c07dcb3.pth'
+sod_path: './model/epoch_resnet.pth'
+use_salinecy: True
+
+
+#===================== add
+edit_mode: 'SDEdit' # 'SDEdit', 'pnp'
+# pnp params -- injection thresholds ∈ [0, 1]
+pnp_attn_t: 0.5
+pnp_f_t: 0.8
+#=====================
+
+#===================== add
+# inversion
+inv_inference_steps: 50
+inv_prompt: 'A woman listening to music with headphones'
+inv_batch_size: 40
+inv_save_path: './latents/music_control/'
+# n_frames: 0
+# save_steps: 0
+#=====================
+use_tokenflow: False
+warp_noise: True

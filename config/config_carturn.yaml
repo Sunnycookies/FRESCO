@@ -1,0 +1,50 @@
+# data
+file_path: './data/car-turn.mp4'
+save_path: './output/carturn/pnp/feature08/f08_a05_w_all/'
+mininterv: 5 # for keyframe selection
+maxinterv: 10 # for keyframe selection
+
+# diffusion
+seed: 0
+prompt: 'a red car turns in the winter'
+# sd_path: 'runwayml/stable-diffusion-v1-5' 
+# sd_path: 'stablediffusionapi/rev-animated' 
+# sd_path: 'stablediffusionapi/flat-2d-animerge' 
+sd_path: 'SG161222/Realistic_Vision_V2.0' 
+use_controlnet: False
+controlnet_type: 'hed'  # 'depth', 'canny'
+cond_scale: 0.7
+use_freeu: False
+
+# video-to-video translation 
+batch_size: 8
+num_inference_steps: 50
+num_warmup_steps: 0
+end_opt_step: 40
+run_ebsynth: False
+max_process: 4
+use_inv_noise: False
+inv_latent_path: '/home/color/fresco2/latents/carturn/latents/'
+
+# supporting model
+gmflow_path: './model/gmflow_sintel-0c07dcb3.pth'
+sod_path: './model/epoch_resnet.pth'
+use_salinecy: True
+
+
+#===================== add
+edit_mode: 'pnp' # 'SDEdit', 'pnp'
+# pnp params -- injection thresholds ∈ [0, 1]
+pnp_attn_t: 0.7
+pnp_f_t: 0.6
+#=====================
+
+# add
+# inversion
+inv_inference_steps: 50
+inv_prompt: 'A silver car turning'
+inv_batch_size: 40
+inv_save_path: './latents/carturn/'
+# n_frames: 0
+# save_steps: 0
+use_tokenflow: True

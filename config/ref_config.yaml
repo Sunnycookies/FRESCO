@@ -1,0 +1,45 @@
+# data
+file_path: ''
+save_path: ''
+mininterv: 0 # for keyframe selection
+maxinterv: 0 # for keyframe selection
+
+# diffusion
+seed: 0
+prompt: ''
+sd_path: 'stabilityai/stable-diffusion-2-1-base' 
+use_controlnet: False
+controlnet_type: 'hed'  # 'depth', 'canny'
+cond_scale: 0.7
+use_freeu: False
+
+# video-to-video translation 
+batch_size: 8
+num_inference_steps: 50
+num_warmup_steps: 0
+end_opt_step: 40
+run_ebsynth: False
+max_process: 4
+use_inv_noise: True
+inv_latent_path: ''
+
+#===================== add
+edit_mode: 'pnp' # 'SDEdit', 'pnp'
+# pnp params -- injection thresholds ∈ [0, 1]
+pnp_attn_t: 0.5
+pnp_f_t: 0.8
+#=====================
+
+
+# supporting model
+gmflow_path: './model/gmflow_sintel-0c07dcb3.pth'
+sod_path: './model/epoch_resnet.pth'
+use_salinecy: True
+
+#===================== add
+# inversion
+inv_inference_steps: 500
+inv_prompt: ''
+inv_batch_size: 40
+inv_save_path: ''
+#=====================

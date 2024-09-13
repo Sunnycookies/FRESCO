@@ -1,0 +1,47 @@
+# data
+file_path: './data/dog.mp4'
+save_path: './output/dog/f_08_a05_w_all/'
+mininterv: 10 # for keyframe selection
+maxinterv: 30 # for keyframe selection
+
+# diffusion
+seed: 0
+prompt: 'greetings from a fox by shaking front paws'
+sd_path: 'SG161222/Realistic_Vision_V2.0' 
+use_controlnet: False
+controlnet_type: 'hed'  # 'depth', 'canny'
+cond_scale: 1.0
+use_freeu: False
+use_inv_noise: True
+inv_latent_path: '/home/color/fresco2/latents/dog/latents/'
+
+#===================== add
+edit_mode: 'pnp' # 'SDEdit', 'pnp'
+# pnp params -- injection thresholds ∈ [0, 1]
+pnp_attn_t: 0.5
+pnp_f_t: 0.8
+#=====================
+
+
+# video-to-video translation 
+batch_size: 8
+num_inference_steps: 50
+num_warmup_steps: 0
+end_opt_step: 40
+run_ebsynth: False
+max_process: 4
+
+# supporting model
+gmflow_path: './model/gmflow_sintel-0c07dcb3.pth'
+sod_path: './model/epoch_resnet.pth'
+use_salinecy: True
+
+#===================== add
+# inversion
+inv_inference_steps: 50
+inv_prompt: ''
+inv_batch_size: 40
+inv_save_path: './latents/dog/'
+# n_frames: 0
+# save_steps: 0
+#=====================

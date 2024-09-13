@@ -1,0 +1,50 @@
+# data
+file_path: './data/woman-running.mp4'
+save_path: './output/test_tokenflow/woman_running/pnp2/50/test_optimize_spatialattn02/'
+mininterv: 10 # for keyframe selection
+maxinterv: 20 # for keyframe selection
+
+# diffusion
+seed: 0
+prompt: 'marble sculpture of a woman running, Venus de Milo'
+sd_path: 'stabilityai/stable-diffusion-2-1-base' 
+use_controlnet: False
+controlnet_type: 'hed'  # 'depth', 'canny'
+cond_scale: 0.7
+use_freeu: False
+
+# video-to-video translation 
+batch_size: 8
+num_inference_steps: 50
+num_warmup_steps: 0
+end_opt_step: 0
+run_ebsynth: False
+max_process: 4
+use_inv_noise: True
+inv_latent_path: '/home/color/fresco2/latents/woman_running_2_1_s500/latents/'
+
+#===================== add
+edit_mode: 'pnp' # 'SDEdit', 'pnp'
+# pnp params -- injection thresholds ∈ [0, 1]
+pnp_attn_t: 0.3
+pnp_f_t: 0.8
+#=====================
+
+
+# supporting model
+gmflow_path: './model/gmflow_sintel-0c07dcb3.pth'
+sod_path: './model/epoch_resnet.pth'
+use_salinecy: True
+
+#===================== add
+# inversion
+inv_inference_steps: 500
+inv_prompt: 'a woman running'
+inv_batch_size: 40
+inv_save_path: './latents/woman_running_2_1_s500/'
+# n_frames: 0
+# save_steps: 0
+#=====================
+
+cfg_scale: 7.5
+use_tokenflow: False

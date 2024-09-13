@@ -1,0 +1,49 @@
+# data
+file_path: './data/boxer-punching-towards-camera.mp4'
+save_path: './output/test_tokenflow/music/boxer/sdedit/20/test_warp_key/'
+mininterv: 1 # for keyframe selection
+maxinterv: 1 # for keyframe selection
+
+# diffusion
+seed: 0
+prompt: 'An African American boxer wearing black boxing gloves punches towards the camera, cartoon style'
+sd_path: 'stablediffusionapi/flat-2d-animerge' 
+use_controlnet: True
+controlnet_type: 'canny'  # 'hed', 'canny'
+cond_scale: 0.7
+use_freeu: False
+
+# video-to-video translation 
+batch_size: 8
+num_inference_steps: 20
+num_warmup_steps: 3
+end_opt_step: 15
+run_ebsynth: False
+max_process: 4
+use_inv_noise: True
+inv_latent_path: '/home/color/fresco2/latents/boxer500/latents/'
+
+
+#===================== add
+edit_mode: 'SDEdit' # 'SDEdit', 'pnp'
+# pnp params -- injection thresholds ∈ [0, 1]
+pnp_attn_t: 0.5
+pnp_f_t: 0.8
+#=====================
+
+# supporting model
+gmflow_path: './model/gmflow_sintel-0c07dcb3.pth'
+sod_path: './model/epoch_resnet.pth'
+use_salinecy: True
+
+#===================== add
+# inversion
+inv_inference_steps: 500
+inv_prompt: ''
+inv_batch_size: 40
+inv_save_path: './latents/boxer500/'
+# n_frames: 0
+# save_steps: 0
+#=====================
+use_tokenflow: False
+warp_noise: True

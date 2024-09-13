@@ -1,0 +1,209 @@
+{
+    "cyberpunkfox_input": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "SG161222/Realistic_Vision_V2.0",
+        "control_scales": 1.0,
+        "prompt": "A cyberpunk fox in the cyberpunk style",
+        "a_prompt": ", RAW photo, subject, (high detailed skin:1.2), 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3",
+        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation"
+    },
+    "frozen": {
+        "strength": 0.4,
+        "control": "hed",
+        "model": "stablediffusionapi/rev-animated",
+        "control_scales": 1.0,
+        "prompt": "a cute girl spinning in cartoon style, Frozen",
+        "a_prompt": ", best quality, extremely detailed",
+        "n_prompt": "open mouth, longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+    },
+    "hamster_input": {
+        "strength": 0.25,
+        "control": "hed",
+        "model": "stablediffusionapi/rev-animated",
+        "control_scales": 1.0,
+        "prompt": "a hamster walking on the piano in cartoon style",
+        "a_prompt": ", best quality, extremely detailed",
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+    },
+    "panther_input": {
+        "strength": 0.25,
+        "control": "hed",
+        "model": "stablediffusionapi/rev-animated",
+        "control_scales": 0.7,
+        "prompt": "a black panther in CG style",
+        "a_prompt": ", best quality, extremely detailed",
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+    },
+    "sakura_input": {
+        "strength": 0.35,
+        "control": "hed",
+        "model": "stablediffusionapi/flat-2d-animerge",
+        "control_scales": 1.0,
+        "prompt": "cartoon Haruno Sakura looking in the railway station, flat, 2D",
+        "a_prompt": ", best quality, extremely detailed",
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+    },
+    "music_input": {
+        "strength": 0.15,
+        "control": "hed",
+        "model": "stablediffusionapi/rev-animated",
+        "control_scales": 1.0,
+        "prompt": "a beautiful woman with headphones listening to music in CG cyberpunk style, neon",
+        "a_prompt": ", best quality, extremely detailed",
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+    },
+    "pool_input": {
+        "strength": 0.25,
+        "control": "hed",
+        "model": "stablediffusionapi/flat-2d-animerge",
+        "control_scales": 0.7,
+        "prompt": "A woman swimming in the pool in cartoon style.",
+        "a_prompt": ", best quality, extremely detailed, under the water",
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+    },
+    "woman_surf_input": {
+        "strength": 0.25,
+        "control": "hed",
+        "model": "SG161222/Realistic_Vision_V2.0",
+        "control_scales": 0.7,
+        "prompt": "a woman surfing in the sea",
+        "a_prompt": ", RAW photo, subject, (high detailed skin:1.2), 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3",
+        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation"
+    },
+    "dolphin_swim_input": {
+        "strength": 0.25,
+        "control": "hed",
+        "model": "SG161222/Realistic_Vision_V2.0",
+        "control_scales": 0.7,
+        "prompt": "dolphins swimming over the sand",
+        "a_prompt": ", RAW photo, subject, (high detailed skin:1.2), 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3",
+        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation"
+    },
+    "lego_car_input": {
+        "strength": 0.25,
+        "control": "hed",
+        "model": "SG161222/Realistic_Vision_V2.0",
+        "control_scales": 0.7,
+        "prompt": "Toy white lego cars are running",
+        "a_prompt": ", RAW photo, subject, (high detailed skin:1.2), 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3",
+        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation"
+    },
+    "catwoman_sunset_input": {
+        "strength": 0.25,
+        "control": "hed",
+        "model": "stablediffusionapi/flat-2d-animerge",
+        "control_scales": 0.7,
+        "prompt": "silhouette of cartoon catwoman doing yoga under sunset on the beach",
+        "a_prompt": ", best quality, extremely detailed, under the water",
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+    },
+    "pink_fish_input": {
+        "strength": 0.25,
+        "control": "hed",
+        "model": "stablediffusionapi/flat-2d-animerge",
+        "control_scales": 0.7,
+        "prompt": "cartoon pink fishes in the sea",
+        "a_prompt": ", best quality, extremely detailed, under the water",
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+    },
+    "car_red_input": {
+        "strength": 0.25,
+        "control": "hed",
+        "model": "SG161222/Realistic_Vision_V2.0",
+        "control_scales": 0.7,
+        "prompt": "a red car turns in the winter",
+        "a_prompt": ", RAW photo, subject, (high detailed skin:1.2), 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3",
+        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation"
+    },
+    "man_surfing_input": {
+        "strength": 0.15,
+        "control": "hed",
+        "model": "SG161222/Realistic_Vision_V2.0",
+        "control_scales": 0.7,
+        "prompt": "a man surfing in the sea",
+        "a_prompt": ", RAW photo, subject, (high detailed skin:1.2), 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3",
+        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation"
+    },
+    "deer_white_input": {
+        "strength": 0.25,
+        "control": "canny",
+        "model": "stablediffusionapi/flat-2d-animerge",
+        "control_scales": 1.0,
+        "prompt": "a white deer in the snow, cartoon, flat",
+        "a_prompt": ", best quality, extremely detailed",
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+    },
+    "glass_cg_input": {
+        "strength": 0.4,
+        "control": "hed",
+        "model": "stablediffusionapi/rev-animated",
+        "control_scales": 1.0,
+        "prompt": "a beautiful woman holding her glasses in CG style",
+        "a_prompt": ", best quality, extremely detailed",
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+    },
+    "cat_white_input": {
+        "strength": -1,
+        "control": "depth",
+        "model": "stablediffusionapi/flat-2d-animerge",
+        "control_scales": 1.0,
+        "prompt": "a white cat in pink background",
+        "a_prompt": ", best quality, extremely detailed",
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+    },
+    "fox_greeting_input": {
+        "strength": 0.4,
+        "control": "hed",
+        "model": "SG161222/Realistic_Vision_V2.0",
+        "control_scales": 1.0,
+        "prompt": "greetings from a fox by shaking front paws",
+        "a_prompt": ", RAW photo, subject, (high detailed skin:1.2), 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3",
+        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation"
+    },
+    "sand_desert_input": {
+        "strength": -1,
+        "control": "hed",
+        "model": "SG161222/Realistic_Vision_V2.0",
+        "control_scales": 1.0,
+        "prompt": "shower of sand in desert",
+        "a_prompt": ", RAW photo, subject, (high detailed skin:1.2), 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3",
+        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation"
+    },
+    "cat_dog_input": {
+        "strength": -1,
+        "control": "hed",
+        "model": "SG161222/Realistic_Vision_V2.0",
+        "control_scales": 0.7,
+        "prompt": "A dog in the grass in the sun",
+        "a_prompt": ", RAW photo, subject, (high detailed skin:1.2), 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3",
+        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation"
+    },
+    "boxer_cartoon_input": {
+        "strength": 0.25,
+        "control": "hed",
+        "model": "stablediffusionapi/flat-2d-animerge",
+        "control_scales": 0.7,
+        "prompt": "A black boxer wearing black boxing gloves punches towards the camera, cartoon style",
+        "a_prompt": ", best quality",
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+    },
+    "woman_cg_input": {
+        "strength": -1,
+        "control": "hed",
+        "model": "stablediffusionapi/rev-animated",
+        "control_scales": 1.0,
+        "prompt": "a beautiful barbie girl in CG style",
+        "a_prompt": ", best quality, extremely detailed",
+        "n_prompt": "dark face, tan face, longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+    },
+    "dance_spiderman_input": {
+        "strength": 0.15,
+        "control": "hed",
+        "model": "stablediffusionapi/flat-2d-animerge",
+        "control_scales": 0.5,
+        "prompt": "a cartoon spiderman in black suit, black shoes and white gloves is dancing",
+        "a_prompt": ", best quality, red mask, extremely detailed",
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+    }
+}
