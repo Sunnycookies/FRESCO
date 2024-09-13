@@ -410,8 +410,8 @@ def run_keyframe_translation_exntended(config):
         conv_injection_timesteps = pipe.scheduler.timesteps[:pnp_f_t] if pnp_f_t >= 0 else []
         register_conv_control_efficient(pipe, conv_injection_timesteps)
         
-        noisest = max([int(x.split('_')[-1].split('.')[0]) for x in glob.glob(os.path.join(config['inv_latent_path'], f'noisy_latents_*.pt'))])
-        latents_path = os.path.join(config['inv_latent_path'], f'noisy_latents_{noisest}.pt')
+        noisest = max([int(x.split('_')[-1].split('.')[0]) for x in glob.glob(os.path.join(config['inv_latent_path'], 'noisy_latents_*.pt'))])
+        latents_path = os.path.join(config['inv_latent_path'], f"noisy_latents_{noisest}.pt")
         inv_noise = torch.load(latents_path)
         
     else:
@@ -448,7 +448,7 @@ def run_keyframe_translation_exntended(config):
             if i != frame_num - 1:
                 continue
 
-        print(f'processing batch [{batch_ind + 1}/{len(keylists)}] with images {img_idx}')
+        print(f"processing batch [{batch_ind + 1}/{len(keylists)}] with images {img_idx}")
 
         propagation_mode = batch_ind > 0
 
@@ -471,8 +471,8 @@ def run_keyframe_translation_exntended(config):
         keylists_pos = [prefix + [pos_map[key] for key in keygroup] + ([pos_map[img_idx[-1]]] if img_idx[-1] not in keygroup else [])
                         for keygroup in sublists_all[batch_ind]]
 
-        print(f'keyframe indexes of images {sublists_all[batch_ind]}')
-        # print(f'keyframe indexes of position {keylists_pos}')
+        print(f"keyframe indexes of images {sublists_all[batch_ind]}")
+        # print(f"keyframe indexes of position {keylists_pos}"")
 
         if config['edit_mode'] == 'pnp':
             inv_noise_batch = torch.cat([inv_noise[ind].unsqueeze(0) for ind in img_idx])
@@ -534,7 +534,7 @@ def run_full_video_translation(config, keys):
         fps = int(video_cap.get(cv2.CAP_PROP_FPS))
         video_name = config['file_path'].split('/')[-1]
         video_name = video_name.split('_')[0]
-        video_name += f'_{config['edit_mode']}_{config['synth_mode']}_{config['keyframe_select_mode']}'
+        video_name += f"_{config['edit_mode']}_{config['synth_mode']}_{config['keyframe_select_mode']}"
         if config['warp_noise']:
             video_name += '_warp'
         if config['keyframe_select_radix'] == 1:
@@ -564,9 +564,9 @@ def run_full_video_translation(config, keys):
     for k in keys:
         print('%d'%(k), end=' ', file=key_ind)
     cmd = (
-        f'python video_blend.py {save_path} --key keys '
-        f'--key_ind {key_ind.getvalue()} --output {o_video} --fps {fps} '
-        f'--n_proc {max_process} -ps')
+        f"python video_blend.py {save_path} --key keys "
+        f"--key_ind {key_ind.getvalue()} --output {o_video} --fps {fps} "
+        f"--n_proc {max_process} -ps")
     
     print('\n```')
     print(cmd)
