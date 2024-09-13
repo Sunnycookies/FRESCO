@@ -56,7 +56,7 @@ with open(refs, 'r') as f:
 
 if not os.path.exists(os.path.join(fresco_path, 'model')):
     os.system(f"conda activate fresco")
-    os.system(f'python {fresco_path}/install_mirror.py')
+    os.system(f"python {fresco_path}/install_mirror.py")
 
 for name, prompts in prompt_dict.items():
     file_name, ext = os.path.splitext(name)
@@ -91,8 +91,8 @@ for name, prompts in prompt_dict.items():
     config_yaml['keyframe_select_radix'] = keyframe_select_radix
 
     # save video path
-    suffix = f'test-{config_yaml['synth_mode']}-{config_yaml['edit_mode']}-'
-    suffix += f'{config_yaml['keyframe_select_mode']}{'-warp' if use_warp_noise else ''}'
+    suffix = f"test-{config_yaml['synth_mode']}-{config_yaml['edit_mode']}-"
+    suffix += f"{config_yaml['keyframe_select_mode']}{'-warp' if use_warp_noise else ''}"
     save_path_video = os.path.join(save_path, suffix, file_name)
     os.makedirs(save_path_video, exist_ok=True)
     
@@ -130,7 +130,7 @@ for name, prompts in prompt_dict.items():
     else:
         config_yaml['inv_prompt'] = ''
         inv_path_name = 'latents-null'
-    inv_latent_save_path = os.path.join(save_path, inv_path_name, file_name, f'inv_step_{config_yaml['inv_inference_steps']}')
+    inv_latent_save_path = os.path.join(save_path, inv_path_name, file_name, f"inv_step_{config_yaml['inv_inference_steps']}")
     config_yaml['inv_save_path'] = inv_latent_save_path
     config_yaml['inv_latent_path'] = os.path.join(inv_latent_save_path, 'latents')
     
@@ -146,8 +146,8 @@ for name, prompts in prompt_dict.items():
     
     # run all prompts
     for prompt in prompts:
-        save_video_with_prompts = os.path.join(save_path_video, f'inv_step_{config_yaml['inv_inference_steps']}', 
-                                               prompt.replace(' ', '_'), f'radix_{keyframe_select_radix}')
+        save_video_with_prompts = os.path.join(save_path_video, f"inv_step_{config_yaml['inv_inference_steps']}", 
+                                               prompt.replace(' ', '_'), f"radix_{keyframe_select_radix}")
         os.makedirs(save_video_with_prompts, exist_ok=True)
         
         config_yaml['save_path'] = save_video_with_prompts +'/'
