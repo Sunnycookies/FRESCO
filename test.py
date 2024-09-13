@@ -54,6 +54,10 @@ if use_inv_prompts == True:
 with open(refs, 'r') as f:
     cfg_dict = json.load(f)
 
+if not os.path.exists(os.path.join(fresco_path, 'model')):
+    os.system(f"conda activate fresco")
+    os.system(f'python {fresco_path}/install_mirror.py')
+
 for name, prompts in prompt_dict.items():
     file_name, ext = os.path.splitext(name)
 
