@@ -4,6 +4,7 @@ import json
 import subprocess
 os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
+os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 
 save_path = '/mnt/netdisk/linjunxin/fresco/'
 user_path = '/home/linjx'
