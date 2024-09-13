@@ -13,9 +13,9 @@ tokenflow_path = user_path + '/fresco'
 
 # edit_method = 'pnp'
 edit_method = 'SDEdit'
-# synth_method = 'Tokenflow'
+synth_method = 'Tokenflow'
 # synth_method = 'ebsynth'
-synth_method = 'None'
+# synth_method = 'None'
 
 if edit_method == 'SDEdit':
     video_dir = fresco_path + '/data/videos'
@@ -37,7 +37,7 @@ if edit_method == 'pnp':
     use_inv_noise = True
     use_inv_prompts = True
 
-all_as_key = True
+all_as_key = False
 keyframe_select_mode = 'fixed'
 keyframe_select_radix = 6
 if all_as_key:
@@ -62,12 +62,12 @@ if not os.path.exists(os.path.join(fresco_path, 'model')):
 for name, prompts in prompt_dict.items():
     file_name, ext = os.path.splitext(name)
 
-    # process item control
-    # if file_name not in ['woman_cg_input']:
-        # continue
-
     # for debug
     print(prompts)
+
+    # process item control
+    if file_name not in ['music_input']:
+        continue
 
     with open(ref_yaml,'r') as f:
         config_yaml = yaml.load(f, Loader=yaml.FullLoader)
@@ -80,7 +80,7 @@ for name, prompts in prompt_dict.items():
     config_yaml['warp_noise'] = use_warp_noise
     config_yaml['use_saliency'] = use_saliency
     config_yaml['run_ebsynth'] = run_ebsynth
-    config_yaml['use_controlnet'] = edit_method == 'pnp'
+    config_yaml['use_controlnet'] = edit_method == 'SDEdit'
     config_yaml['use_inv_noise'] = use_inv_noise
     
     # parameters for keyframe selection

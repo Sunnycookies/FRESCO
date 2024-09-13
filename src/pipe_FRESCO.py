@@ -707,11 +707,11 @@ def inference(pipe, controlnet, frescoProc,
 @torch.autocast(dtype=torch.float16, device_type='cuda')
 @torch.no_grad()
 def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, keylists, n_prompt, prompts, inv_prompts, 
-                       end_opt_step, batch_size, propagation_mode, repeat_noise = False, warp_noise = False, 
-                       do_classifier_free_guidance = True, use_tokenflow = False, edit_mode = 'SDEdit', visualize_pipeline = False, 
-                       use_controlnet = True, use_saliency = False, use_inv_noise = False, cond_scale = [0.7] * 20, 
-                       num_inference_steps = 20, num_warmup_steps = 6, seed = 0, guidance_scale = 7.5, record_latents = [], 
-                       inv_noise = None, num_intraattn_steps = 1, step_interattn_end = 350, bg_smoothing_steps = [16, 17], 
+                       end_opt_step, propagation_mode, repeat_noise = False, warp_noise = False, do_classifier_free_guidance = True, 
+                       use_tokenflow = False, edit_mode = 'SDEdit', visualize_pipeline = False, use_controlnet = True, 
+                       use_saliency = False, use_inv_noise = False, cond_scale = [0.7] * 20, num_inference_steps = 20, 
+                       num_warmup_steps = 6, seed = 0, guidance_scale = 7.5, record_latents = [], inv_noise = None, 
+                       num_intraattn_steps = 1, step_interattn_end = 350, bg_smoothing_steps = [16, 17], 
                        flow_model = None, sod_model = None, dilate = None):
 
     gc.collect()
@@ -802,10 +802,7 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, key
         if edit_mode == 'pnp':
             pnp_prompt_embeds_group = pipe._encode_prompt(
                 [inv_prompts[i] for i in keygroup],
-                device,
-                1,
-                False,
-                ''
+                device, 1, False, ''
             )
             prompt_embeds_group = torch.cat([pnp_prompt_embeds_group, prompt_embeds_group])
 
@@ -881,10 +878,7 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, key
             if edit_mode == 'pnp':
                 pnp_keyframe_prompt_embeds = pipe._encode_prompt(
                     [inv_prompts[k] for k in keygroup],
-                    device,
-                    1,
-                    False,
-                    ''
+                    device, 1, False, ''
                 )
                 keyframe_prompt_embeds = torch.cat([pnp_keyframe_prompt_embeds, keyframe_prompt_embeds])
 
@@ -1048,4 +1042,4 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, key
     gc.collect()
     torch.cuda.empty_cache()
 
-    return latents         
+    return latents

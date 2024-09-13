@@ -399,7 +399,9 @@ def run_keyframe_translation_exntended(config):
     print(f"split keyframes into groups {keylists}")
 
     os.makedirs(config['save_path'], exist_ok=True)
-    os.makedirs(config['save_path']+'keys', exist_ok=True)
+    if os.path.exists(config['save_path']+'keys'):
+        os.system(f"rm -rf {config['save_path']+'keys'}")
+    os.makedirs(config['save_path']+'keys')
 
     if config['edit_mode']=='pnp':
         pnp_f_t = int(config["num_inference_steps"] * config["pnp_f_t"])
@@ -484,11 +486,11 @@ def run_keyframe_translation_exntended(config):
         torch.cuda.empty_cache()
 
         latents = inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, keylists_pos, n_prompt, prompts, inv_prompts,
-                                     config['end_opt_step'], config['batch_size'], propagation_mode, False, config['warp_noise'], 
-                                     do_classifier_free_guidance, config['synth_mode'] == 'Tokenflow', config['edit_mode'], False, 
-                                     config['use_controlnet'], config['use_saliency'], config['use_inv_noise'], cond_scale, 
-                                     config['num_inference_steps'], config['num_warmup_steps'], config['seed'], guidance_scale, 
-                                     record_latent, inv_noise_batch, flow_model=flow_model, sod_model=sod_model, dilate=dilate)
+                                     config['end_opt_step'], propagation_mode, False, config['warp_noise'], do_classifier_free_guidance, 
+                                     config['synth_mode'] == 'Tokenflow', config['edit_mode'], False, config['use_controlnet'], 
+                                     config['use_saliency'], config['use_inv_noise'], cond_scale, config['num_inference_steps'], 
+                                     config['num_warmup_steps'], config['seed'], guidance_scale, record_latent, inv_noise_batch, 
+                                     flow_model=flow_model, sod_model=sod_model, dilate=dilate)
 
         gc.collect()
         torch.cuda.empty_cache()

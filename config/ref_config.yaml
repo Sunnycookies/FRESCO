@@ -34,7 +34,7 @@ pnp_f_t: 0.8
 # supporting model
 gmflow_path: './model/gmflow_sintel-0c07dcb3.pth'
 sod_path: './model/epoch_resnet.pth'
-use_salinecy: True
+use_saliency: True
 
 #===================== add
 # inversion
