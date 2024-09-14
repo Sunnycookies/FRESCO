@@ -2,7 +2,7 @@ import os
 import yaml
 import json
 import subprocess
-os.environ['CUDA_VISIBLE_DEVICES'] = '6'
+os.environ['CUDA_VISIBLE_DEVICES'] = '4'
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 
@@ -13,9 +13,9 @@ tokenflow_path = user_path + '/fresco'
 
 # edit_method = 'pnp'
 edit_method = 'SDEdit'
-synth_method = 'Tokenflow'
+# synth_method = 'Tokenflow'
 # synth_method = 'ebsynth'
-# synth_method = 'None'
+synth_method = 'None'
 
 if edit_method == 'SDEdit':
     video_dir = fresco_path + '/data/videos'
@@ -37,7 +37,7 @@ if edit_method == 'pnp':
     use_inv_noise = True
     use_inv_prompts = True
 
-all_as_key = False
+all_as_key = False or synth_method not in ['Tokenflow', 'ebsynth']
 keyframe_select_mode = 'fixed'
 keyframe_select_radix = 6
 if all_as_key:
@@ -66,7 +66,7 @@ for name, prompts in prompt_dict.items():
     print(prompts)
 
     # process item control
-    if file_name not in ['music_input']:
+    if file_name not in ['tiger_input']:
         continue
 
     with open(ref_yaml,'r') as f:
