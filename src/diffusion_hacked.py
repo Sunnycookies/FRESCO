@@ -514,7 +514,7 @@ class FRESCOAttnProcessor2_0_pnp:
 
         # add: inject pnp
         if (self.t in self.controller.qk_injection_timesteps or self.t == 1000) and (not crossattn):
-            print('qk inject at step', self.t)
+            # print('qk inject at step', self.t)
             query = torch.cat([query[:batch_size//self.unet_chunk_size]]*self.unet_chunk_size)
             key = torch.cat([key[:batch_size//self.unet_chunk_size]]*self.unet_chunk_size)
         
@@ -845,7 +845,7 @@ def register_conv_control_efficient(model, injection_schedule):
             hidden_states = self.conv2(hidden_states)
             if self.injection_schedule is not None and (self.t in self.injection_schedule or self.t == 1000):
                 source_batch_size = int(hidden_states.shape[0] // 3)
-                print(hidden_states.shape, source_batch_size)
+                # print(hidden_states.shape, source_batch_size)
                 # inject unconditional
                 hidden_states[source_batch_size:2 * source_batch_size] = hidden_states[:source_batch_size]
                 # inject conditional

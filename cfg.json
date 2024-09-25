@@ -145,7 +145,7 @@
     },
     "cat_white_input": {
         "strength": -1,
-        "control": "depth",
+        "control": "hed",
         "model": "stablediffusionapi/flat-2d-animerge",
         "control_scales": 1.0,
         "prompt": "a white cat in pink background",
@@ -259,5 +259,86 @@
         "prompt": "A beautiful grandma, white hair",
         "a_prompt": ", RAW photo, subject, (high detailed skin:1.2), 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3",
         "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation"
+    },
+    "bread-80": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "stabilityai/stable-diffusion-2-1-base",
+        "control_scales": 0.7,
+        "prompt": "an ice sculpture",
+        "a_prompt": "",
+        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic"
+    },
+    "basketball-man-120": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "stabilityai/stable-diffusion-2-1-base",
+        "control_scales": 0.7,
+        "prompt": "the milky way, a star wars clone trooper spinning a planet",
+        "a_prompt": "",
+        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic"
+    },
+    "dog-in-car-200": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "stabilityai/stable-diffusion-2-1-base",
+        "control_scales": 0.7,
+        "prompt": "Sahara desert, a cheeta looking out the car window",
+        "a_prompt": "",
+        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic"
+    },
+    "woman-running-120": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "stabilityai/stable-diffusion-2-1-base",
+        "control_scales": 0.7,
+        "prompt": "a marble sculpture of a woman running",
+        "a_prompt": ", Venus de Milo",
+        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic"
+    },
+    "eagle-200": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "stabilityai/stable-diffusion-2-1-base",
+        "control_scales": 0.7,
+        "prompt": "an origami of an eagle, pink paper art",
+        "a_prompt": "",
+        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic"
+    },
+    "wolf-40": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "stabilityai/stable-diffusion-2-1-base",
+        "control_scales": 0.7,
+        "prompt": "a colorful polygonal illustration of a wolf",
+        "a_prompt": "",
+        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic"
+    },
+    "tesla-200": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "stabilityai/stable-diffusion-2-1-base",
+        "control_scales": 0.7,
+        "prompt": "an ice sculpture of a car",
+        "a_prompt": "",
+        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic"
+    },
+    "man-56": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "stabilityai/stable-diffusion-2-1-base",
+        "control_scales": 0.7,
+        "prompt": "a greek marble sculpture",
+        "a_prompt": "",
+        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic"
+    },
+    "cats-88": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "stabilityai/stable-diffusion-2-1-base",
+        "control_scales": 0.7,
+        "prompt": "colorful crochet kittens",
+        "a_prompt": "",
+        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic"
     }
 }

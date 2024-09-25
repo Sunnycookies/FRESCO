@@ -10,10 +10,7 @@ import gc
 import yaml
 import argparse
 import torch
-import torchvision
 import diffusers
-import numpy as np
-import glob
 from diffusers import StableDiffusionPipeline, AutoencoderKL, DDPMScheduler, ControlNetModel, DDIMScheduler
 
 from src.utils import *
@@ -80,7 +77,10 @@ def get_models(config):
     else:
         vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse", torch_dtype=torch.float16)
         pipe = StableDiffusionPipeline.from_pretrained(config['sd_path'], vae=vae, torch_dtype=torch.float16)
-    pipe.scheduler = DDPMScheduler.from_config(pipe.scheduler.config)
+    if config['edit_mode'] == 'SDEdit':
+        pipe.scheduler = DDPMScheduler.from_config(pipe.scheduler.config)
+    else:
+        pipe.scheduler = DDIMScheduler.from_pretrained(config['sd_path'] ,subfolder="scheduler")
     # pipe.scheduler = DDIMScheduler.from_config(pipe.scheduler.config)
     #noise_scheduler = DDPMScheduler.from_pretrained("runwayml/stable-diffusion-v1-5", subfolder="scheduler")
     pipe.to("cuda")
@@ -92,7 +92,7 @@ def get_models(config):
 
     frescoProc = apply_FRESCO_attn(pipe, config['edit_mode'])
     frescoProc.controller.disable_controller()
-    apply_FRESCO_opt(pipe)
+    apply_FRESCO_opt(pipe, edit_mode=config['edit_mode'])
     print('create diffusion model ' + config['sd_path'] + ' successfully!')
     
     for param in flow_model.parameters():
@@ -358,7 +358,10 @@ def run_keyframe_translation_exntended(config):
     dilate = Dilate(device=device)
     
     base_prompt = config['prompt']
-    if 'Realistic' in config['sd_path'] or 'realistic' in config['sd_path']:
+    if 'n_prompt' in config and 'a_prompt' in config:
+        a_prompt = config['a_prompt']
+        n_prompt = config['n_prompt']
+    elif 'Realistic' in config['sd_path'] or 'realistic' in config['sd_path']:
         a_prompt = ', RAW photo, subject, (high detailed skin:1.2), 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3, '
         n_prompt = '(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation'
     else:
@@ -404,20 +407,13 @@ def run_keyframe_translation_exntended(config):
     os.makedirs(config['save_path']+'keys')
 
     if config['edit_mode']=='pnp':
-        pnp_f_t = int(config["num_inference_steps"] * config["pnp_f_t"])
+        pnp_attn_t = int(config["num_inference_steps"] * config["pnp_attn_t"])
         qk_injection_timesteps = pipe.scheduler.timesteps[:pnp_attn_t] if pnp_attn_t >= 0 else []
         frescoProc.controller.set_qk_injection_timesteps(qk_injection_timesteps)
         
-        pnp_attn_t = int(config["num_inference_steps"] * config["pnp_attn_t"])
+        pnp_f_t = int(config["num_inference_steps"] * config["pnp_f_t"])
         conv_injection_timesteps = pipe.scheduler.timesteps[:pnp_f_t] if pnp_f_t >= 0 else []
         register_conv_control_efficient(pipe, conv_injection_timesteps)
-        
-        noisest = max([int(x.split('_')[-1].split('.')[0]) for x in glob.glob(os.path.join(config['inv_latent_path'], 'noisy_latents_*.pt'))])
-        latents_path = os.path.join(config['inv_latent_path'], f"noisy_latents_{noisest}.pt")
-        inv_noise = torch.load(latents_path)
-        
-    else:
-        inv_noise = None
 
     gc.collect()
     torch.cuda.empty_cache()
@@ -476,20 +472,15 @@ def run_keyframe_translation_exntended(config):
         print(f"keyframe indexes of images {sublists_all[batch_ind]}")
         # print(f"keyframe indexes of position {keylists_pos}"")
 
-        if config['edit_mode'] == 'pnp':
-            inv_noise_batch = torch.cat([inv_noise[ind].unsqueeze(0) for ind in img_idx])
-        else:
-            # inv_noise_batch = load_source_latents_t(timesteps[0], config['inv_latent_path'])
-            inv_noise_batch = None
-
         gc.collect()
         torch.cuda.empty_cache()
 
-        latents = inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, keylists_pos, n_prompt, prompts, inv_prompts,
-                                     config['end_opt_step'], propagation_mode, False, config['warp_noise'], do_classifier_free_guidance, 
+        latents = inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, img_idx, keylists_pos, n_prompt, 
+                                     prompts, inv_prompts, config['inv_latent_path'], config['end_opt_step'], propagation_mode, 
+                                     False, config['warp_noise'], config['use_fresco'], do_classifier_free_guidance, 
                                      config['synth_mode'] == 'Tokenflow', config['edit_mode'], False, config['use_controlnet'], 
                                      config['use_saliency'], config['use_inv_noise'], cond_scale, config['num_inference_steps'], 
-                                     config['num_warmup_steps'], config['seed'], guidance_scale, record_latent, inv_noise_batch, 
+                                     config['num_warmup_steps'], config['seed'], guidance_scale, record_latent,
                                      flow_model=flow_model, sod_model=sod_model, dilate=dilate)
 
         gc.collect()
@@ -532,10 +523,13 @@ def run_keyframe_translation_exntended(config):
 def run_full_video_translation(config, keys):
     print('\n' + '=' * 100)
     if config['synth_mode'] == 'Tokenflow' or config['maxinterv'] == 1:
-        video_cap = cv2.VideoCapture(config['file_path'])    
+        video_cap = cv2.VideoCapture(config['file_path'])
         fps = int(video_cap.get(cv2.CAP_PROP_FPS))
         video_name = config['file_path'].split('/')[-1]
-        video_name = video_name.split('_')[0]
+        if config['edit_mode'] == 'SDEdit':
+            video_name = video_name.split('_')[0]
+        else:
+            video_name = video_name.split('-')[0]
         video_name += f"_{config['edit_mode']}_{config['synth_mode']}_{config['keyframe_select_mode']}"
         if config['warp_noise']:
             video_name += '_warp'

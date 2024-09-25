@@ -1,18 +1,21 @@
 import os
 import yaml
 import json
-import subprocess
-os.environ['CUDA_VISIBLE_DEVICES'] = '4'
+os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
-os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
+# os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
+
+use_mirror = True
+if use_mirror:
+    os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 
 save_path = '/mnt/netdisk/linjunxin/fresco/'
 user_path = '/home/linjx'
 fresco_path = user_path + '/fresco'
 tokenflow_path = user_path + '/fresco'
 
-# edit_method = 'pnp'
-edit_method = 'SDEdit'
+edit_method = 'pnp'
+# edit_method = 'SDEdit'
 # synth_method = 'Tokenflow'
 # synth_method = 'ebsynth'
 synth_method = 'None'
@@ -28,9 +31,10 @@ inv_prompts = video_dir + '/inv_prompts.json'
 ref_yaml = fresco_path + '/config/ref_config.yaml'
 refs = fresco_path + '/cfg.json'
 
+use_fresco = False
 run_ebsynth = False
 use_warp_noise = False
-use_saliency = True
+use_saliency = False
 use_inv_prompts = False
 use_inv_noise = False
 if edit_method == 'pnp':
@@ -38,10 +42,11 @@ if edit_method == 'pnp':
     use_inv_prompts = True
 
 all_as_key = False or synth_method not in ['Tokenflow', 'ebsynth']
-keyframe_select_mode = 'fixed'
+keyframe_select_mode = 'loop'
 keyframe_select_radix = 6
 if all_as_key:
     keyframe_select_radix = 1
+    keyframe_select_mode = 'fixed'
 
 default_sd = 'stabilityai/stable-diffusion-2-1-base'
 
@@ -57,7 +62,7 @@ with open(refs, 'r') as f:
 
 if not os.path.exists(os.path.join(fresco_path, 'model')):
     os.system(f"conda activate fresco")
-    os.system(f"python {fresco_path}/install_mirror.py")
+    os.system(f"python {fresco_path}/install.py{' --mirror' if use_mirror else''}")
 
 for name, prompts in prompt_dict.items():
     file_name, ext = os.path.splitext(name)
@@ -66,7 +71,7 @@ for name, prompts in prompt_dict.items():
     print(prompts)
 
     # process item control
-    if file_name not in ['tiger_input']:
+    if file_name not in ['bread-80']:
         continue
 
     with open(ref_yaml,'r') as f:
@@ -77,6 +82,7 @@ for name, prompts in prompt_dict.items():
     # methods selection
     config_yaml['edit_mode'] = edit_method
     config_yaml['synth_mode'] = synth_method
+    config_yaml['use_fresco'] = use_fresco
     config_yaml['warp_noise'] = use_warp_noise
     config_yaml['use_saliency'] = use_saliency
     config_yaml['run_ebsynth'] = run_ebsynth
@@ -94,6 +100,7 @@ for name, prompts in prompt_dict.items():
     # save video path
     suffix = f"test-{config_yaml['synth_mode']}-{config_yaml['edit_mode']}-"
     suffix += f"{config_yaml['keyframe_select_mode']}{'-warp' if use_warp_noise else ''}"
+    suffix += f"{'-inv' if use_inv_noise and config_yaml['edit_mode'] == 'SDEdit' else ''}"
     save_path_video = os.path.join(save_path, suffix, file_name)
     os.makedirs(save_path_video, exist_ok=True)
     
@@ -136,14 +143,14 @@ for name, prompts in prompt_dict.items():
     config_yaml['inv_latent_path'] = os.path.join(inv_latent_save_path, 'latents')
     
     # inversion noise produce
-    if use_inv_noise and not os.path.exists(config_yaml['inv_latent_path']):
+    if use_inv_noise and (not os.path.exists(config_yaml['inv_latent_path']) or len(os.listdir(config_yaml['inv_latent_path'])) == 0):
         os.makedirs(config_yaml['inv_latent_path'])
         with open(os.path.join(inv_latent_save_path, 'config.yaml'),'w') as f:
             yaml.dump(config_yaml, f, default_flow_style=False)
         with open(os.path.join(save_path_video, 'config.yaml'),'w') as f:
             yaml.dump(config_yaml, f, default_flow_style=False)
         os.system(f"conda activate fresco")
-        subprocess.run(f"python {fresco_path}/preprocess.py {os.path.join(save_path_video, 'config.yaml')}", shell=True)
+        os.system(f"python {fresco_path}/preprocess.py {os.path.join(save_path_video, 'config.yaml')}")
     
     # run all prompts
     for prompt in prompts:
@@ -157,4 +164,4 @@ for name, prompts in prompt_dict.items():
         with open(os.path.join(save_video_with_prompts, 'config.yaml'),'w') as f:
             yaml.dump(config_yaml, f, default_flow_style=False)
         
-        subprocess.run(f"python {fresco_path}/run_fresco.py {os.path.join(save_video_with_prompts, 'config.yaml')}", shell=True)
+        os.system(f"python {fresco_path}/run_fresco.py {os.path.join(save_video_with_prompts, 'config.yaml')}")

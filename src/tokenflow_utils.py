@@ -41,7 +41,7 @@ def make_tokenflow_attention_block(block_class: Type[torch.nn.Module], unet_chun
             class_labels=None,
         ) -> torch.Tensor:
 
-            
+            # print("tokenflow_block!")
             
             batch_size, sequence_length, dim = hidden_states.shape
             n_frames = batch_size // unet_chunk_size

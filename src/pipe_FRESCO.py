@@ -3,6 +3,7 @@ from src.flow_utils import warp_tensor
 import torch
 import torchvision
 import gc
+import glob
 from diffusers.utils import torch_utils
 
 from src.diffusion_hacked import *
@@ -303,6 +304,19 @@ def step_warp(pipe, model_output, timestep, sample, generator, repeat_noise=Fals
     pred_prev_sample = pred_prev_sample + variance
     
     return (pred_prev_sample, pred_original_sample)
+
+def step_extended(pipe, model_output, timestep, sample, generator, repeat_noise=False, visualize_pipeline=False, 
+                  flows=None, occs=None, saliency=None, warp_noise = False, flows_centralized = None, ddim = False):
+    if ddim:
+        return step_ddim(pipe=pipe, model_output=model_output, timestep=timestep, sample=sample, generator=generator, 
+                         visualize_pipeline=visualize_pipeline, flows = flows, occs = occs, saliency=saliency)
+    elif warp_noise:
+        return step_warp(pipe, model_output, timestep, sample, generator, visualize_pipeline=visualize_pipeline, 
+                         flows = flows, occs = occs, saliency=saliency, flows_centralized = flows_centralized, warp_noise = True)
+    else:
+        return step(pipe, model_output, timestep, sample, generator, visualize_pipeline=visualize_pipeline, 
+                    flows = flows, occs = occs, saliency=saliency)
+    
 
 @torch.autocast(dtype=torch.float16, device_type='cuda')
 @torch.no_grad()
@@ -706,11 +720,11 @@ def inference(pipe, controlnet, frescoProc,
 
 @torch.autocast(dtype=torch.float16, device_type='cuda')
 @torch.no_grad()
-def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, keylists, n_prompt, prompts, inv_prompts, 
-                       end_opt_step, propagation_mode, repeat_noise = False, warp_noise = False, do_classifier_free_guidance = True, 
-                       use_tokenflow = False, edit_mode = 'SDEdit', visualize_pipeline = False, use_controlnet = True, 
-                       use_saliency = False, use_inv_noise = False, cond_scale = [0.7] * 20, num_inference_steps = 20, 
-                       num_warmup_steps = 6, seed = 0, guidance_scale = 7.5, record_latents = [], inv_noise = None, 
+def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, img_idxs, keylists, n_prompt, prompts, inv_prompts, 
+                       inv_latent_path, end_opt_step, propagation_mode, repeat_noise = False, warp_noise = False, use_fresco = True,
+                       do_classifier_free_guidance = True, use_tokenflow = False, edit_mode = 'SDEdit', visualize_pipeline = False, 
+                       use_controlnet = True, use_saliency = False, use_inv_noise = False, cond_scale = [0.7] * 20, 
+                       num_inference_steps = 20, num_warmup_steps = 6, seed = 0, guidance_scale = 7.5, record_latents = [],  
                        num_intraattn_steps = 1, step_interattn_end = 350, bg_smoothing_steps = [16, 17], 
                        flow_model = None, sod_model = None, dilate = None):
 
@@ -735,10 +749,14 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, key
         do_classifier_free_guidance,
         [n_prompt] * len(prompts)
     )
-    
+
     # prepate initial latents (noise)
-    if edit_mode == 'pnp' or use_inv_noise:
-        latents = inv_noise
+    if edit_mode == 'pnp':
+        noisest = max([int(x.split('_')[-1].split('.')[0]) for x in glob.glob(os.path.join(inv_latent_path, f'noisy_latents_*.pt'))])
+        latents_path = os.path.join(inv_latent_path, f'noisy_latents_{noisest}.pt')
+        latents = torch.load(latents_path)[img_idxs]
+    elif use_inv_noise:
+        latents = load_source_latents_t(timesteps[0], inv_latent_path)[img_idxs]
     else:
         B, C, H, W = imgs_torch.shape
         latents = pipe.prepare_latents(
@@ -754,23 +772,27 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, key
 
     if warp_noise:
         flows_all, occs_all, _, _, flows_centralized_all = get_flow_and_interframe_paras_warped(flow_model, imgs)
-    else:
-        flows_all, occs_all, _, _ = get_flow_and_interframe_paras(flow_model, imgs)
-
-    if warp_noise:
         latents_type = latents.dtype
         saliency_all = get_saliency(imgs, sod_model, dilate) if use_saliency else None
-        latents = warp_pure_noise(latents, flows_centralized_all, occs_all, saliency_all, 1)
-        latents = latents.to(latents_type)
+        latents = warp_pure_noise(latents, flows_centralized_all, occs_all, saliency_all, 1).to(latents_type)
+    else:
+        flows_all, occs_all, _, _ = get_flow_and_interframe_paras(flow_model, imgs)
     
     if repeat_noise:
         latents = latents[0:1].repeat(B,1,1,1).detach()
 
-    if num_warmup_steps < 0:
+    if num_warmup_steps <= 0:
         latents_init = latents.detach()
         num_warmup_steps = 0
     else:
-        latent_x0 = pipe.vae.config.scaling_factor * pipe.vae.encode(imgs_torch.to(pipe.unet.dtype)).latent_dist.sample()
+        # latent_x0 = pipe.vae.config.scaling_factor * pipe.vae.encode(imgs_torch.to(pipe.unet.dtype)).latent_dist.sample()
+        batch_size = 8
+        latent_x0 = []
+        for i in range(0, len(imgs_torch), batch_size):
+            end = min(len(imgs_torch), i + batch_size)
+            latent_x0_batch = pipe.vae.config.scaling_factor * pipe.vae.encode(imgs_torch[i:end].to(pipe.unet.dtype)).latent_dist.sample()
+            latent_x0.append(latent_x0_batch)
+        latent_x0 = torch.cat(latent_x0)
         latents_init = noise_scheduler.add_noise(latent_x0, latents, timesteps[num_warmup_steps]).detach()
 
     keys_loop_len = len(keylists)
@@ -779,9 +801,9 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, key
     flows_mem = []
     occs_mem = []
     flows_centralized_mem = []
-    saliency_mem = []
     attn_mask_mem = []
     interattn_paras_mem = []
+    saliency_mem = []
     correlation_matrix_mem = []
 
     # prepare parameters for inter-frame and intra-frame consistency
@@ -799,12 +821,6 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, key
             do_classifier_free_guidance,
             [n_prompt] * len(keygroup)
         )
-        if edit_mode == 'pnp':
-            pnp_prompt_embeds_group = pipe._encode_prompt(
-                [inv_prompts[i] for i in keygroup],
-                device, 1, False, ''
-            )
-            prompt_embeds_group = torch.cat([pnp_prompt_embeds_group, prompt_embeds_group])
 
         saliency_group = get_saliency(imgs_group, sod_model, dilate) if use_saliency else None
 
@@ -816,26 +832,28 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, key
                 = get_flow_and_interframe_paras(flow_model, imgs_group)
             flows_centralized_group = None
         
-        correlation_matrix_group = get_intraframe_paras(pipe, imgs_group_torch, frescoProc, prompt_embeds_group,
-                                                        do_classifier_free_guidance, seed, False, True, ind)
+        if edit_mode == 'pnp':
+            correlation_matrix_group = []
+        else:
+            correlation_matrix_group = get_intraframe_paras(pipe, imgs_group_torch, frescoProc, prompt_embeds_group,
+                                                            do_classifier_free_guidance, seed, False, True, ind)
         
         flows_mem.append(flows_group)
         occs_mem.append(occs_group)
         flows_centralized_mem.append(flows_centralized_group)
-        saliency_mem.append(saliency_group)
         attn_mask_mem.append(attn_mask_group)
         interattn_paras_mem.append(interattn_paras_group)
+        saliency_mem.append(saliency_group)
         correlation_matrix_mem.append(correlation_matrix_group)
-    
+
     if use_tokenflow:
         set_tokenflow(pipe.unet, edit_mode)
 
     gc.collect()
     torch.cuda.empty_cache()
 
-    latents = latents_init
-
     with pipe.progress_bar(total=num_inference_steps - num_warmup_steps) as progress_bar:
+        latents = latents_init
         for i, t in enumerate(timesteps[num_warmup_steps:]):
             i_ = i % keys_loop_len
             keygroup = keylists[i_]
@@ -851,15 +869,21 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, key
             correlation_matrix = correlation_matrix_mem[i_]
             saliency = saliency_mem[i_]
 
-            # Turn on all FRESCO support
-            frescoProc.controller.enable_controller(interattn_paras, attn_mask, True, False, i_)
-            apply_FRESCO_opt(pipe, steps = timesteps[:end_opt_step], flows = flows, occs = occs, 
-                             correlation_matrix=correlation_matrix, saliency=saliency, optimize_temporal = True)
+            if edit_mode == 'pnp':
+                ref_inv_latent = load_source_latents_t(t, inv_latent_path)[img_idxs]
 
-            if i >= num_intraattn_steps:
-                frescoProc.controller.disable_intraattn(False)
-            if t < step_interattn_end:
-                frescoProc.controller.disable_interattn()
+            # Turn on FRESCO support
+            if use_fresco:
+                frescoProc.controller.enable_controller(interattn_paras, attn_mask, True, False, i_)
+                apply_FRESCO_opt(pipe, steps = timesteps[:end_opt_step], flows = flows, occs = occs, 
+                                 correlation_matrix=correlation_matrix, saliency=saliency, 
+                                 optimize_temporal = True, edit_mode=edit_mode)
+                
+                if i >= num_intraattn_steps:
+                    frescoProc.controller.disable_intraattn(False)
+                if t < step_interattn_end:
+                    frescoProc.controller.disable_interattn()
+
             if propagation_mode:
                 latents[0:2] = record_latents[i].detach().clone()
                 record_latents[i] = latents[[0,len(latents)-1]].detach().clone()
@@ -868,6 +892,10 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, key
 
             latent_model_input = latents[keygroup]
             keyframe_edges = edges[keygroup]
+            if do_classifier_free_guidance:
+                keyframe_edges = torch.cat([keyframe_edges.to(pipe.unet.dtype)] * 2)
+                latent_model_input = torch.cat([latent_model_input] * 2)
+            
             keyframe_prompt_embeds = pipe._encode_prompt(
                 [prompts[k] for k in keygroup],
                 device,
@@ -877,14 +905,11 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, key
             )
             if edit_mode == 'pnp':
                 pnp_keyframe_prompt_embeds = pipe._encode_prompt(
-                    [inv_prompts[k] for k in keygroup],
-                    device, 1, False, ''
+                    [inv_prompts[k] for k in keygroup], device, 1, False, ''
                 )
                 keyframe_prompt_embeds = torch.cat([pnp_keyframe_prompt_embeds, keyframe_prompt_embeds])
 
-            if do_classifier_free_guidance:
-                keyframe_edges = torch.cat([keyframe_edges.to(pipe.unet.dtype)] * 2)
-                latent_model_input = torch.cat([latent_model_input] * 2)
+                latent_model_input = torch.cat([ref_inv_latent[keygroup], latent_model_input])
 
             if use_controlnet:
                 control_model_input = latent_model_input
@@ -905,7 +930,8 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, key
             
             if use_tokenflow:
                 register_pivotal(pipe.unet, True)
-                register_time(pipe, t)
+
+            register_time(pipe, t)
 
             noise_pred = pipe.unet(
                 latent_model_input,
@@ -916,35 +942,35 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, key
                 mid_block_additional_residual=mid_block_res_sample,
                 return_dict=False,
             )[0]
+
+            if use_fresco:
+                disable_FRESCO_opt(pipe)
+                frescoProc.controller.disable_controller(False)
             
-            if use_tokenflow:
-                register_pivotal(pipe.unet, False)
-            elif do_classifier_free_guidance:
-                noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
-
-            disable_FRESCO_opt(pipe)
-            frescoProc.controller.disable_controller(False)
-
             if not use_tokenflow:
-                flows_, occs_, saliency_ = None, None, None
+                if edit_mode == 'pnp':
+                    noise_pred = torch.cat(list(noise_pred.chunk(3)[1:]))
+
+                if do_classifier_free_guidance:
+                    noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+                    noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
+
+                flows_, occs_, saliency_, flows_centralized_ = None, None, None, None
                 if i + num_warmup_steps in bg_smoothing_steps:
                     flows_, occs_, saliency_ = flows, occs, saliency
                 if warp_noise:
                     flows_centralized_ = flows_centralized
-                    latents = step_warp(pipe, noise_pred, t, latents, generator,
-                                        visualize_pipeline=visualize_pipeline,
-                                        flows=flows_, occs=occs_, saliency=saliency_,
-                                        flows_centralized=flows_centralized_, warp_noise=True)[0]
-                else:
-                    latents = step(pipe, noise_pred, t, latents, generator,
-                                   visualize_pipeline=visualize_pipeline,
-                                   flows=flows_, occs=occs_, saliency=saliency_)[0]
+                latents = step_extended(pipe, noise_pred, t, latents, generator, visualize_pipeline=visualize_pipeline,
+                                        flows=flows_, occs=occs_, saliency=saliency_, flows_centralized=flows_centralized_,
+                                        warp_noise=warp_noise, ddim=edit_mode=='pnp')[0]
                     
                 if i == len(timesteps) - 1 or ((i + 1) > 0 and (i + 1) % pipe.scheduler.order == 0):
                     progress_bar.update()
-                
+
                 continue
+
+            # using tokenflow method below
+            register_pivotal(pipe.unet, False)       
 
             denoised_latents = []
 
@@ -962,6 +988,10 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, key
                 full_latent = latents[key:end]
                 latent_model_input_tokenflow = full_latent
                 edges_tokenflow = edges[key:end]
+                if do_classifier_free_guidance:
+                    edges_tokenflow = torch.cat([edges_tokenflow.to(pipe.unet.dtype)] * 2)
+                    latent_model_input_tokenflow = torch.cat([latent_model_input_tokenflow] * 2)
+                
                 prompt_embeds_tokenflow = pipe._encode_prompt(
                     prompts[key:end],
                     device,
@@ -971,27 +1001,22 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, key
                 )
                 if edit_mode == 'pnp':
                     pnp_prompt_embeds_tokenflow = pipe._encode_prompt(
-                        inv_prompts[key:end],
-                        device,
-                        1,
-                        False,
-                        ''
+                        inv_prompts[key:end], device, 1, False, ''
                     )
                     prompt_embeds_tokenflow = torch.cat([pnp_prompt_embeds_tokenflow, prompt_embeds_tokenflow])
 
-                if do_classifier_free_guidance:
-                    edges_tokenflow = torch.cat([edges_tokenflow.to(pipe.unet.dtype)] * 2)
-                    latent_model_input_tokenflow = torch.cat([full_latent] * 2)
+                    latent_model_input_tokenflow = torch.cat([ref_inv_latent[key:end], latent_model_input_tokenflow])
                 
                 if use_controlnet:
                     control_model_input = latent_model_input_tokenflow
                     controlnet_prompt_embeds = prompt_embeds_tokenflow
+                    controlnet_cond = edges_tokenflow
 
                     down_block_res_samples, mid_block_res_sample = controlnet(
                         control_model_input,
                         t,
                         encoder_hidden_states=controlnet_prompt_embeds,
-                        controlnet_cond=edges_tokenflow,
+                        controlnet_cond=controlnet_cond,
                         conditioning_scale=cond_scale[i+num_warmup_steps],
                         guess_mode=False,
                         return_dict=False,
@@ -1009,11 +1034,14 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, key
                     return_dict=False,
                 )[0]
 
+                if edit_mode == 'pnp':
+                    noise_pred = torch.cat(list(noise_pred.chunk(3)[1:]))
+
                 if do_classifier_free_guidance:
                     noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
                     noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
 
-                flows_, occs_, saliency_ = None, None, None
+                flows_, occs_, saliency_, flows_centralized_ = None, None, None, None
                 if i + num_warmup_steps in bg_smoothing_steps and end - key > 1:
                     flows_ = [flow[key:end] for flow in flows_all]
                     occs_ = [occ[key:end] for occ in occs_all]
@@ -1022,22 +1050,20 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, key
                         saliency_ = get_saliency(imgs[key:end], sod_model, dilate)
                 if warp_noise:
                     flows_centralized_ = [flow_c[key:end] for flow_c in flows_centralized_all]
-                    latents_batch = step_warp(pipe, noise_pred, t, full_latent, generator, visualize_pipeline=visualize_pipeline,
+                latents_batch = step_extended(pipe, noise_pred, t, full_latent, generator, visualize_pipeline=visualize_pipeline,
                                               flows=flows_, occs=occs_, saliency=saliency_, flows_centralized=flows_centralized_,
-                                              warp_noise=True)[0]
-                else:
-                    latents_batch = step(pipe, noise_pred, t, full_latent, generator, flows=flows_, occs=occs_, 
-                                         visualize_pipeline=visualize_pipeline, saliency=saliency_)[0]
+                                              warp_noise=warp_noise, ddim=edit_mode=='pnp')[0]
                 
                 denoised_latents.append(latents_batch)
 
             latents = torch.cat(denoised_latents)
-        
+
             if i == len(timesteps) - 1 or ((i + 1) > 0 and (i + 1) % pipe.scheduler.order == 0):
                 progress_bar.update()
-        
-    frescoProc.controller.clear_store()
-    frescoProc.controller.disable_controller()
+
+    if use_fresco:    
+        frescoProc.controller.clear_store()
+        frescoProc.controller.disable_controller()
 
     gc.collect()
     torch.cuda.empty_cache()

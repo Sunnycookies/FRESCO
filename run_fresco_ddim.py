@@ -1,5 +1,5 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = "5"
+os.environ['CUDA_VISIBLE_DEVICES'] = "4"
 
 # In China, set this to use huggingface
 # os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
@@ -20,7 +20,7 @@ from src.keyframe_selection import get_keyframe_ind
 from src.diffusion_hacked import apply_FRESCO_attn, apply_FRESCO_opt, disable_FRESCO_opt
 from src.diffusion_hacked import get_flow_and_interframe_paras, get_intraframe_paras
 from src.diffusion_hacked import register_conv_control_efficient
-from src.pipe_FRESCO_ddim import inference, inference_pnp, inference_extended
+from src.pipe_FRESCO_ddim import inference, inference_pnp
 from src.tokenflow_utils import *
 
 def get_models(config):
@@ -234,7 +234,7 @@ def run_keyframe_translation(config):
         if do_classifier_free_guidance:
             edges = torch.cat([edges.to(pipe.unet.dtype)] * 2)
             
-        if config['use_salinecy']:
+        if config['use_saliency']:
             saliency = get_saliency(imgs, sod_model, dilate) 
         else:
             saliency = None
@@ -271,7 +271,7 @@ def run_keyframe_translation(config):
 
         # add by BYH 
         # apply tokenflow propagation
-        if config['use_tokenflow']:
+        if config['synth_mode']=='Tokenflow':
             set_tokenflow(pipe.unet, 'pnp')
         
 
@@ -325,7 +325,7 @@ def run_keyframe_translation(config):
                   do_classifier_free_guidance, config['seed'], guidance_scale,         
                   record_latents, propagation_mode,
                   flows = flows, occs = occs, saliency=saliency, repeat_noise=False, 
-                    inv_latent_path = config['inv_latent_path'], img_idx=img_idx, use_tokenflow=config['use_tokenflow'])
+                    inv_latent_path = config['inv_latent_path'], img_idx=img_idx, use_tokenflow=config['synth_mode']=='Tokenflow')
         
         # Deprecated
         # run!
@@ -346,7 +346,7 @@ def run_keyframe_translation(config):
         with torch.no_grad():
             # print(latents.shape)
             # memory saving image decode for tokenflow.
-            if config['use_tokenflow']:
+            if config['synth_mode']=='Tokenflow':
                 start = 2 if propagation_mode else 0
                 size = len(latents)
                 image = []
@@ -387,7 +387,7 @@ def run_keyframe_translation(config):
             break
         
         # turn off all pnp injection and tokenflow for intra-frame feature extraction
-        if config['use_tokenflow']:
+        if config['synth_mode']=='Tokenflow':
             deactivate_tokenflow(pipe.unet)
         
             

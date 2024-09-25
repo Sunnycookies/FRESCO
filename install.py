@@ -1,7 +1,17 @@
 import os
 import platform
+import argparse
 
 import requests
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-m', '--mirror', action="store_true")
+use_mirror = parser.parse_args().mirror
+
+if use_mirror:
+    website = 'https://hf-mirror.com'
+else:
+    website = 'https://huggingface.co'
 
 
 def build_ebsynth():
@@ -48,40 +58,40 @@ def download(url, dir, name=None):
 
 
 def download_gmflow_ckpt():
-    url = ('https://huggingface.co/PKUWilliamYang/Rerender/'
+    url = (f'{website}/PKUWilliamYang/Rerender/'
            'resolve/main/models/gmflow_sintel-0c07dcb3.pth')
     download(url, 'model')
 
 
 def download_egnet_ckpt():
-    url = ('https://huggingface.co/PKUWilliamYang/Rerender/'
+    url = (f'{website}/PKUWilliamYang/Rerender/'
            'resolve/main/models/epoch_resnet.pth')
     download(url, 'model')
 
 def download_hed_ckpt():
-    url = ('https://huggingface.co/lllyasviel/Annotators/'
+    url = (f'{website}/lllyasviel/Annotators/'
            'resolve/main/ControlNetHED.pth')
     download(url, 'src/ControlNet/annotator/ckpts')
 
 def download_depth_ckpt():
-    url = ('https://huggingface.co/lllyasviel/ControlNet/'
+    url = (f'{website}/lllyasviel/ControlNet/'
            'resolve/main/annotator/ckpts/dpt_hybrid-midas-501f0c75.pt')
     download(url, 'src/ControlNet/annotator/ckpts')
 
 def download_ebsynth_ckpt():
     os_str = platform.system()
     if os_str == 'Linux':
-        url = ('https://huggingface.co/PKUWilliamYang/Rerender/'
+        url = (f'{website}/PKUWilliamYang/Rerender/'
                'resolve/main/models/ebsynth')
         download(url, 'src/ebsynth/deps/ebsynth/bin')
     elif os_str == 'Windows':
-        url = ('https://huggingface.co/PKUWilliamYang/Rerender/'
+        url = (f'{website}/PKUWilliamYang/Rerender/'
                'resolve/main/models/ebsynth.exe')
         download(url, 'src/ebsynth/deps/ebsynth/bin')  
-        url = ('https://huggingface.co/PKUWilliamYang/Rerender/'
+        url = (f'{website}/PKUWilliamYang/Rerender/'
                'resolve/main/models/ebsynth_cpu.dll')
         download(url, 'src/ebsynth/deps/ebsynth/bin')
-        url = ('https://huggingface.co/PKUWilliamYang/Rerender/'
+        url = (f'{website}/PKUWilliamYang/Rerender/'
                'resolve/main/models/ebsynth_cpu.exe')
         download(url, 'src/ebsynth/deps/ebsynth/bin')
     else:
