@@ -1,22 +1,28 @@
 import os
 import yaml
 import json
+import argparse
 os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 # os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 
-use_mirror = True
+parser = argparse.ArgumentParser()
+parser.add_argument('-e', '--edit', type=str, default='pnp', choices=['pnp', 'SDEdit'])
+parser.add_argument('-s', '--synth', type=str, default='Tokenflow', choices=['Tokenflow', 'ebsynth', 'None'])
+parser.add_argument('-m', '--mirror', action='store_true')
+parser.add_argument('-f', '--fresco', action='store_true')
+args = parser.parse_args()
+
+use_mirror = args.mirror
 if use_mirror:
     os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 
 save_path = '/mnt/netdisk/linjunxin/fresco/'
 fresco_path = os.getcwd()
 
-edit_method = 'pnp'
-# edit_method = 'SDEdit'
-synth_method = 'Tokenflow'
-# synth_method = 'ebsynth'
-# synth_method = 'None'
+edit_method = args.edit
+synth_method = args.synth
+use_fresco = args.fresco
 
 if edit_method == 'SDEdit':
     video_dir = fresco_path + '/data/videos'
@@ -29,8 +35,8 @@ inv_prompts = video_dir + '/inv_prompts.json'
 ref_yaml = fresco_path + '/config/ref_config.yaml'
 refs = fresco_path + '/cfg.json'
 
-use_fresco = False
-run_ebsynth = False
+run_ebsynth = synth_method == 'ebsynth'
+
 use_warp_noise = False
 use_saliency = False
 use_inv_prompts = False
