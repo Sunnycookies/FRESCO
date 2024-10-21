@@ -87,7 +87,7 @@ DDIM Step
 
 """
 def step_ddim(pipe, model_output, timestep, sample, eta = 0.0, use_clipped_model_output = False, generator = None, repeat_noise = False,
-              variance_noise = None, return_dict = True, visualize_pipeline = False, flows = None, occs = None,saliency = None) :
+              variance_noise = None, return_dict = True, visualize_pipeline = False, flows = None, occs = None, saliency = None) :
         """
         Predict the sample at the previous timestep by reversing the SDE. Core function to propagate the diffusion
         process from the learned model outputs (most often the predicted noise).
@@ -781,19 +781,26 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, img
     if repeat_noise:
         latents = latents[0:1].repeat(B,1,1,1).detach()
 
-    if num_warmup_steps <= 0:
+    batch_size = 8
+    latent_x0 = []
+    for i in range(0, len(imgs_torch), batch_size):
+        end = min(len(imgs_torch), i + batch_size)
+        latent_x0_batch = pipe.vae.config.scaling_factor * pipe.vae.encode(imgs_torch[i:end].to(pipe.unet.dtype)).latent_dist.sample()
+        latent_x0.append(latent_x0_batch)
+    latent_x0 = torch.cat(latent_x0)
+
+    if edit_mode == 'pnp':
+        alpha_prod_T = noise_scheduler.alphas_cumprod[noisest]
+        mu_T, sigma_T = alpha_prod_T ** 0.5, (1 - alpha_prod_T) ** 0.5
+        latents = (latents - mu_T * latent_x0) / sigma_T
+        latents_init = noise_scheduler.add_noise(latent_x0, latents, timesteps[num_warmup_steps]).detach()
+    elif num_warmup_steps <= 0:
         latents_init = latents.detach()
         num_warmup_steps = 0
     else:
-        # latent_x0 = pipe.vae.config.scaling_factor * pipe.vae.encode(imgs_torch.to(pipe.unet.dtype)).latent_dist.sample()
-        batch_size = 8
-        latent_x0 = []
-        for i in range(0, len(imgs_torch), batch_size):
-            end = min(len(imgs_torch), i + batch_size)
-            latent_x0_batch = pipe.vae.config.scaling_factor * pipe.vae.encode(imgs_torch[i:end].to(pipe.unet.dtype)).latent_dist.sample()
-            latent_x0.append(latent_x0_batch)
-        latent_x0 = torch.cat(latent_x0)
         latents_init = noise_scheduler.add_noise(latent_x0, latents, timesteps[num_warmup_steps]).detach()
+    
+    del latent_x0
 
     keys_loop_len = len(keylists)
 
@@ -848,6 +855,7 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, img
 
     if use_tokenflow:
         set_tokenflow(pipe.unet, edit_mode)
+    frescoProc.controller.disable_intraattn(False)
 
     gc.collect()
     torch.cuda.empty_cache()
@@ -944,7 +952,6 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, img
             )[0]
 
             if use_fresco:
-                disable_FRESCO_opt(pipe)
                 frescoProc.controller.disable_controller(False)
             
             if not use_tokenflow:
@@ -956,9 +963,9 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, img
                     noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
 
                 flows_, occs_, saliency_, flows_centralized_ = None, None, None, None
-                if i + num_warmup_steps in bg_smoothing_steps:
+                if use_fresco and i + num_warmup_steps in bg_smoothing_steps:
                     flows_, occs_, saliency_ = flows, occs, saliency
-                if warp_noise:
+                if use_fresco and warp_noise:
                     flows_centralized_ = flows_centralized
                 latents = step_extended(pipe, noise_pred, t, latents, generator, visualize_pipeline=visualize_pipeline,
                                         flows=flows_, occs=occs_, saliency=saliency_, flows_centralized=flows_centralized_,
@@ -980,6 +987,17 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, img
                     end = 1
 
                 # print(f"conducting tokenflow on images [{key}:{end}]")
+
+                flows_, occs_, correlation_matrix_, saliency_ = None, None, None, None
+
+                if use_fresco:
+                    flows_ = [flow[key:end] for flow in flows_all]
+                    occs_ = [occ[key:end] for occ in occs_all]
+                    correlation_matrix_ = correlation_matrix[key:end]
+                    saliency_ = saliency[key:end] if use_saliency else None
+                    apply_FRESCO_opt(pipe, steps = timesteps[:end_opt_step], flows = flows_, occs = occs_, 
+                                     correlation_matrix=correlation_matrix_, saliency=saliency_, 
+                                     optimize_temporal = True, edit_mode=edit_mode)
 
                 register_batch_ind = j + (j > 0) - (key == keygroup[-1])
 
@@ -1040,16 +1058,11 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, img
                 if do_classifier_free_guidance:
                     noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
                     noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
-
-                flows_, occs_, saliency_, flows_centralized_ = None, None, None, None
-                if i + num_warmup_steps in bg_smoothing_steps and end - key > 1:
-                    flows_ = [flow[key:end] for flow in flows_all]
-                    occs_ = [occ[key:end] for occ in occs_all]
-                    if use_saliency:
-                        # saliency_ = saliency[key:end]
-                        saliency_ = get_saliency(imgs[key:end], sod_model, dilate)
-                if warp_noise:
-                    flows_centralized_ = [flow_c[key:end] for flow_c in flows_centralized_all]
+                
+                flows_centralized_ = [flow_c[key:end] for flow_c in flows_centralized_all] if warp_noise else None
+                if i + num_warmup_steps not in bg_smoothing_steps:
+                    flows_, occs_, saliency_ = None, None, None
+                
                 latents_batch = step_extended(pipe, noise_pred, t, full_latent, generator, visualize_pipeline=visualize_pipeline,
                                               flows=flows_, occs=occs_, saliency=saliency_, flows_centralized=flows_centralized_,
                                               warp_noise=warp_noise, ddim=edit_mode=='pnp')[0]

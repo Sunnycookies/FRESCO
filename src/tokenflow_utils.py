@@ -95,8 +95,6 @@ def make_tokenflow_attention_block(block_class: Type[torch.nn.Module], unet_chun
                 self.kf_attn_output = self.attn_output 
             else:
                 batch_kf_size, _, _ = self.kf_attn_output.shape
-                # print('kf',self.kf_attn_output.shape)
-                
                 self.attn_output = self.kf_attn_output.view(unet_chunk_size, batch_kf_size // unet_chunk_size, sequence_length, dim)[:,
                                    batch_idxs]  # 3, n_frames, seq_len, dim --> 3, len(batch_idxs), seq_len, dim
             if self.use_ada_layer_norm_zero:
@@ -122,7 +120,6 @@ def make_tokenflow_attention_block(block_class: Type[torch.nn.Module], unet_chun
                     w1 = w1.unsqueeze(0).unsqueeze(-1).unsqueeze(-1).repeat(unet_chunk_size, 1, sequence_length, dim)
                     attn_output1 = attn_output1.view(unet_chunk_size, n_frames, sequence_length, dim)
                     attn_output2 = attn_output2.view(unet_chunk_size, n_frames, sequence_length, dim)
-                    
                     attn_output = w1 * attn_output1 + (1 - w1) * attn_output2
                 else:
                     attn_output = self.attn_output[:,0].gather(dim=1, index=idx1.unsqueeze(-1).repeat(1, 1, dim))
@@ -133,8 +130,6 @@ def make_tokenflow_attention_block(block_class: Type[torch.nn.Module], unet_chun
                 attn_output = self.attn_output
             hidden_states = hidden_states.reshape(batch_size, sequence_length, dim)  # 3 * n_frames, seq_len, dim
             hidden_states = attn_output + hidden_states
-
-            
 
             if self.attn2 is not None:
                 norm_hidden_states = (
@@ -148,7 +143,6 @@ def make_tokenflow_attention_block(block_class: Type[torch.nn.Module], unet_chun
                     attention_mask=encoder_attention_mask,
                     **cross_attention_kwargs,
                 )
-                
                 hidden_states = attn_output + hidden_states
 
             # 3. Feed-forward

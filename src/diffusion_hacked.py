@@ -211,7 +211,6 @@ class FRESCOAttnProcessor2_0:
     ):
         residual = hidden_states
         # print('sde attn shape',hidden_states.shape)
-        
 
         if attn.spatial_norm is not None:
             hidden_states = attn.spatial_norm(hidden_states, temb)
@@ -465,15 +464,9 @@ class FRESCOAttnProcessor2_0_pnp:
     ):
         residual = hidden_states
         # print('pnp attn ori hidden_states',hidden_states.shape)
+
         pnp_ref_hidden_states = hidden_states.chunk(3)[0]
-        # print('pnp attn ref hidden_states',pnp_ref_hidden_states.shape)
 
-        if encoder_hidden_states is not None:
-            # encoder_hidden_states = torch.cat(encoder_hidden_states.chunk(3)[1:])
-            # print('pnp encoder hidden space ',encoder_hidden_states.shape)
-            pass
-
-        # print('======================================================')
         if attn.spatial_norm is not None:
             hidden_states = attn.spatial_norm(hidden_states, temb)
 
@@ -512,11 +505,9 @@ class FRESCOAttnProcessor2_0_pnp:
         key = attn.to_k(encoder_hidden_states)
         value = attn.to_v(encoder_hidden_states)
 
-        # add: inject pnp
-        if (self.t in self.controller.qk_injection_timesteps or self.t == 1000) and (not crossattn):
-            # print('qk inject at step', self.t)
-            query = torch.cat([query[:batch_size//self.unet_chunk_size]]*self.unet_chunk_size)
-            key = torch.cat([key[:batch_size//self.unet_chunk_size]]*self.unet_chunk_size)
+        if self.controller and (self.t in self.controller.qk_injection_timesteps or self.t == 1000) and (not crossattn):
+            query = torch.cat([query.chunk(self.unet_chunk_size)[0]]*self.unet_chunk_size)
+            key = torch.cat([key.chunk(self.unet_chunk_size)[0]]*self.unet_chunk_size)
         
         query_raw, key_raw = None, None
         if self.controller and self.controller.use_interattn and (not crossattn):
@@ -563,9 +554,7 @@ class FRESCOAttnProcessor2_0_pnp:
         if self.controller and  self.controller.use_intraattn and (not crossattn): 
             # update: use pnp reference feature to inject q and k
             # ref_hidden_states = self.controller(None)
-            
             ref_hidden_states = torch.cat([hidden_states.chunk(self.unet_chunk_size)[0]]*self.unet_chunk_size)
-            
             
             assert ref_hidden_states.shape == encoder_hidden_states.shape
             query_ = attn.to_q(ref_hidden_states)
@@ -692,21 +681,23 @@ class FRESCOAttnProcessor2_0_pnp:
             hidden_states = hidden_states.transpose(-1, -2).reshape(batch_size, channel, height, width)
 
         if attn.residual_connection:
-            
             hidden_states = hidden_states + residual
 
         hidden_states = hidden_states / attn.rescale_output_factor
 
         # hidden_states = torch.cat([pnp_ref_hidden_states,hidden_states])
         return hidden_states
+    
 def apply_FRESCO_attn(pipe, edit_mode = 'SDEdit'):
     """
     Apply FRESCO-guided attention to a StableDiffusionPipeline
     """
-    if edit_mode == 'SDEdit':    
+    if edit_mode == 'SDEdit':
         frescoProc = FRESCOAttnProcessor2_0(2, AttentionControl())
     elif edit_mode == 'pnp':
         frescoProc = FRESCOAttnProcessor2_0_pnp(3, AttentionControl())
+    else:
+        raise NotImplementedError
     attnProc = AttnProcessor2_0()
     attn_processor_dict = {}
     for k in pipe.unet.attn_processors.keys():
@@ -845,7 +836,6 @@ def register_conv_control_efficient(model, injection_schedule):
             hidden_states = self.conv2(hidden_states)
             if self.injection_schedule is not None and (self.t in self.injection_schedule or self.t == 1000):
                 source_batch_size = int(hidden_states.shape[0] // 3)
-                # print(hidden_states.shape, source_batch_size)
                 # inject unconditional
                 hidden_states[source_batch_size:2 * source_batch_size] = hidden_states[:source_batch_size]
                 # inject conditional
@@ -1464,6 +1454,7 @@ def my_forward_pnp(self, steps = [], layers = [0,1,2,3], flows = None, occs = No
         '''
         [HACK] restore the decoder features in up_samples
         '''
+
         up_samples = ()
         #down_samples = ()
         for i, upsample_block in enumerate(self.up_blocks):
@@ -1483,18 +1474,15 @@ def my_forward_pnp(self, steps = [], layers = [0,1,2,3], flows = None, occs = No
             sample_opt = torch.cat(sample.chunk(3)[1:])
 
             # calculate gram matrix with injected original feature by pnp.
-            correlation_matrix = []
             latent_vector = rearrange(torch.cat([sample.chunk(3)[0],sample.chunk(3)[0]]), "b c h w -> b (h w) c")
             latent_vector = latent_vector / ((latent_vector ** 2).sum(dim=2, keepdims=True) ** 0.5)
             attention_probs = torch.bmm(latent_vector, latent_vector.transpose(-1, -2))
-            correlation_matrix += [attention_probs.detach().clone().to(torch.float32)]
-            
-            
+            correlation_matrix = [attention_probs.detach().clone().to(torch.float32)]
+            del attention_probs, latent_vector
 
             if i in layers:
                 up_samples += (sample, )
             if timestep in steps and i in layers: 
-                # print('opt')
                 sample_opt = optimize_feature(sample_opt, flows, occs, correlation_matrix, 
                                           intra_weight, iters, optimize_temporal = optimize_temporal)
                 if saliency is not None:
@@ -1553,7 +1541,7 @@ def disable_FRESCO_opt(pipe):
     """
     Disable the FRESCO-based optimization
     """  
-    apply_FRESCO_opt(pipe)
+    apply_FRESCO_opt(pipe, edit_mode='origin')
 
 
 """

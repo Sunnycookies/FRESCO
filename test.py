@@ -10,20 +10,18 @@ if use_mirror:
     os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 
 save_path = '/mnt/netdisk/linjunxin/fresco/'
-user_path = '/home/linjx'
-fresco_path = user_path + '/fresco'
-tokenflow_path = user_path + '/fresco'
+fresco_path = os.getcwd()
 
 edit_method = 'pnp'
 # edit_method = 'SDEdit'
-# synth_method = 'Tokenflow'
+synth_method = 'Tokenflow'
 # synth_method = 'ebsynth'
-synth_method = 'None'
+# synth_method = 'None'
 
 if edit_method == 'SDEdit':
     video_dir = fresco_path + '/data/videos'
 else:
-    video_dir = tokenflow_path + '/data/tokenflow_supp_videos'
+    video_dir = fresco_path + '/data/tokenflow_supp_videos'
 prompts = video_dir + '/prompts.json'
 key_intervs = video_dir + '/key_interv.json'
 inv_prompts = video_dir + '/inv_prompts.json'
@@ -101,6 +99,7 @@ for name, prompts in prompt_dict.items():
     suffix = f"test-{config_yaml['synth_mode']}-{config_yaml['edit_mode']}-"
     suffix += f"{config_yaml['keyframe_select_mode']}{'-warp' if use_warp_noise else ''}"
     suffix += f"{'-inv' if use_inv_noise and config_yaml['edit_mode'] == 'SDEdit' else ''}"
+    suffix += f"{'-no_fresco' if not use_fresco else ''}"
     save_path_video = os.path.join(save_path, suffix, file_name)
     os.makedirs(save_path_video, exist_ok=True)
     
@@ -108,7 +107,7 @@ for name, prompts in prompt_dict.items():
     config_yaml['sd_path'] = default_sd
     
     # process parameters
-    config_yaml['seed'] = 0
+    config_yaml['seed'] = 0 if edit_method == 'SDEdit' else 1
     config_yaml['batch_size'] = 4
     config_yaml['cond_scale'] = 0.7
     config_yaml['controlnet_type'] = 'hed'
@@ -144,7 +143,7 @@ for name, prompts in prompt_dict.items():
     
     # inversion noise produce
     if use_inv_noise and (not os.path.exists(config_yaml['inv_latent_path']) or len(os.listdir(config_yaml['inv_latent_path'])) == 0):
-        os.makedirs(config_yaml['inv_latent_path'])
+        os.makedirs(config_yaml['inv_latent_path'], exist_ok=True)
         with open(os.path.join(inv_latent_save_path, 'config.yaml'),'w') as f:
             yaml.dump(config_yaml, f, default_flow_style=False)
         with open(os.path.join(save_path_video, 'config.yaml'),'w') as f:

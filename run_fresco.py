@@ -44,6 +44,8 @@ def get_models(config):
                    num_transformer_layers=6,
                    ).to('cuda')
     
+    local_files_only = True
+    
     checkpoint = torch.load(config['gmflow_path'], map_location=lambda storage, loc: storage)
     weights = checkpoint['model'] if 'model' in checkpoint else checkpoint
     flow_model.load_state_dict(weights, strict=False)
@@ -61,7 +63,7 @@ def get_models(config):
         print('unsupported control type, set to hed')
         config['controlnet_type'] = 'hed'
     controlnet = ControlNetModel.from_pretrained("lllyasviel/sd-controlnet-"+config['controlnet_type'], 
-                                                 torch_dtype=torch.float16)
+                                                 torch_dtype=torch.float16, local_files_only=local_files_only)
     controlnet.to("cuda") 
     if config['controlnet_type'] == 'depth':
         detector = MidasDetector()
@@ -73,14 +75,14 @@ def get_models(config):
     
     # diffusion model
     if config['sd_path'] == 'stabilityai/stable-diffusion-2-1-base':
-        pipe = StableDiffusionPipeline.from_pretrained(config['sd_path'], torch_dtype=torch.float16)
+        pipe = StableDiffusionPipeline.from_pretrained(config['sd_path'], torch_dtype=torch.float16, local_files_only=local_files_only)
     else:
-        vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse", torch_dtype=torch.float16)
-        pipe = StableDiffusionPipeline.from_pretrained(config['sd_path'], vae=vae, torch_dtype=torch.float16)
+        vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse", torch_dtype=torch.float16, local_files_only=local_files_only)
+        pipe = StableDiffusionPipeline.from_pretrained(config['sd_path'], vae=vae, torch_dtype=torch.float16, local_files_only=local_files_only)
     if config['edit_mode'] == 'SDEdit':
         pipe.scheduler = DDPMScheduler.from_config(pipe.scheduler.config)
     else:
-        pipe.scheduler = DDIMScheduler.from_pretrained(config['sd_path'] ,subfolder="scheduler")
+        pipe.scheduler = DDIMScheduler.from_pretrained(config['sd_path'] ,subfolder="scheduler", local_files_only=local_files_only)
     # pipe.scheduler = DDIMScheduler.from_config(pipe.scheduler.config)
     #noise_scheduler = DDPMScheduler.from_pretrained("runwayml/stable-diffusion-v1-5", subfolder="scheduler")
     pipe.to("cuda")
@@ -90,9 +92,10 @@ def get_models(config):
         from src.free_lunch_utils import apply_freeu
         apply_freeu(pipe, b1=1.2, b2=1.5, s1=1.0, s2=1.0)
 
-    frescoProc = apply_FRESCO_attn(pipe, config['edit_mode'])
+    edit_mode = config['edit_mode'] if config['use_fresco'] else 'None'
+    frescoProc = apply_FRESCO_attn(pipe, edit_mode=config['edit_mode'])
     frescoProc.controller.disable_controller()
-    apply_FRESCO_opt(pipe, edit_mode=config['edit_mode'])
+    apply_FRESCO_opt(pipe, edit_mode=edit_mode)
     print('create diffusion model ' + config['sd_path'] + ' successfully!')
     
     for param in flow_model.parameters():
@@ -531,6 +534,8 @@ def run_full_video_translation(config, keys):
         else:
             video_name = video_name.split('-')[0]
         video_name += f"_{config['edit_mode']}_{config['synth_mode']}_{config['keyframe_select_mode']}"
+        if not config['use_fresco']:
+            video_name += '_no-fresco'
         if config['warp_noise']:
             video_name += '_warp'
         if config['keyframe_select_radix'] == 1:
