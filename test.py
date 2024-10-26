@@ -2,13 +2,13 @@ import os
 import yaml
 import json
 import argparse
-os.environ['CUDA_VISIBLE_DEVICES'] = '6'
+os.environ['CUDA_VISIBLE_DEVICES'] = '3'
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 # os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-e', '--edit', type=str, default='pnp', choices=['pnp', 'SDEdit'])
-parser.add_argument('-s', '--synth', type=str, default='Tokenflow', choices=['Tokenflow', 'ebsynth', 'None'])
+parser.add_argument('-s', '--synth', type=str, default='Tokenflow', choices=['Tokenflow', 'ebsynth', 'None', 'mixed'])
 parser.add_argument('-m', '--mirror', action='store_true')
 parser.add_argument('-f', '--fresco', action='store_true')
 args = parser.parse_args()
@@ -46,7 +46,7 @@ if edit_method == 'pnp':
     use_inv_prompts = True
 
 all_as_key = False or synth_method not in ['Tokenflow', 'ebsynth']
-keyframe_select_mode = 'loop'
+keyframe_select_mode = 'fixed'
 keyframe_select_radix = 6
 if all_as_key:
     keyframe_select_radix = 1
@@ -75,7 +75,7 @@ for name, prompts in prompt_dict.items():
     print(prompts)
 
     # process item control
-    if file_name not in ['bread-80']:
+    if file_name not in ['bread-80', 'man-56', 'wolf-40', 'cats-88']:
         continue
 
     with open(ref_yaml,'r') as f:

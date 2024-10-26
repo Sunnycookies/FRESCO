@@ -408,6 +408,8 @@ def run_keyframe_translation_exntended(config):
     if os.path.exists(config['save_path']+'keys'):
         os.system(f"rm -rf {config['save_path']+'keys'}")
     os.makedirs(config['save_path']+'keys')
+    if config['run_ebsynth']:
+        os.makedirs(config['save_path']+'video', exist_ok=True)
 
     if config['edit_mode']=='pnp':
         pnp_attn_t = int(config["num_inference_steps"] * config["pnp_attn_t"])
@@ -435,6 +437,8 @@ def run_keyframe_translation_exntended(config):
             print(f"{'/' * 100}\nAn error occurred when reading frame from {config['file_path']} frame {i}\n{'/' * 100}")
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         img = resize_image(frame, 512)
+        if config['run_ebsynth']:
+            Image.fromarray(img).save(os.path.join(config['save_path'], 'video/%04d.png'%(i)))
         
         if i not in keylists[batch_ind] and config['synth_mode'] != 'Tokenflow':
             continue
@@ -445,9 +449,11 @@ def run_keyframe_translation_exntended(config):
         if batch_ind < len(keylists) - 1:
             if i != keylists[batch_ind][-1]:
                 continue
-        elif config['synth_mode'] == 'Tokenflow' or config['maxinterv'] == 1:
+        elif config['synth_mode'] == 'Tokenflow':
             if i != frame_num - 1:
                 continue
+        elif i != keylists[batch_ind][-1]:
+            continue
 
         print(f"processing batch [{batch_ind + 1}/{len(keylists)}] with images {img_idx}")
 
@@ -525,21 +531,21 @@ def run_keyframe_translation_exntended(config):
 
 def run_full_video_translation(config, keys):
     print('\n' + '=' * 100)
+    video_cap = cv2.VideoCapture(config['file_path'])
+    fps = int(video_cap.get(cv2.CAP_PROP_FPS))
+    video_name = config['file_path'].split('/')[-1]
+    if config['edit_mode'] == 'SDEdit':
+        video_name = video_name.split('_')[0]
+    else:
+        video_name = video_name.split('-')[0]
+    video_name += f"_{config['edit_mode']}_{config['synth_mode']}_{config['keyframe_select_mode']}"
+    if not config['use_fresco']:
+        video_name += '_no-fresco'
+    if config['warp_noise']:
+        video_name += '_warp'
+    if config['keyframe_select_radix'] == 1:
+        video_name += '_key'
     if config['synth_mode'] == 'Tokenflow' or config['maxinterv'] == 1:
-        video_cap = cv2.VideoCapture(config['file_path'])
-        fps = int(video_cap.get(cv2.CAP_PROP_FPS))
-        video_name = config['file_path'].split('/')[-1]
-        if config['edit_mode'] == 'SDEdit':
-            video_name = video_name.split('_')[0]
-        else:
-            video_name = video_name.split('-')[0]
-        video_name += f"_{config['edit_mode']}_{config['synth_mode']}_{config['keyframe_select_mode']}"
-        if not config['use_fresco']:
-            video_name += '_no-fresco'
-        if config['warp_noise']:
-            video_name += '_warp'
-        if config['keyframe_select_radix'] == 1:
-            video_name += '_key'
         cmd = f"python to_video_multi.py -r {config['save_path']} -o {config['save_path']} -n {video_name} -f {fps}"
         print('\n```')
         print(cmd)
@@ -556,9 +562,7 @@ def run_full_video_translation(config, keys):
     else:
         print('translating full video with:')
 
-    video_cap = cv2.VideoCapture(config['file_path'])    
-    fps = int(video_cap.get(cv2.CAP_PROP_FPS))
-    o_video = os.path.join(config['save_path'], 'blend.mp4')
+    o_video = os.path.join(config['save_path'], f'{video_name}.mp4')
     max_process = config['max_process']
     save_path = config['save_path']
     key_ind = io.StringIO()
@@ -577,7 +581,7 @@ def run_full_video_translation(config, keys):
         os.system(cmd)
     
     print('\n' + '=' * 100)
-    print('Done')    
+    print('Done')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
