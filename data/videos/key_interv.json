@@ -1,36 +1,34 @@
 {
-    "boxer_cartoon_input.mp4":[2,2],
-    "glass_cg_input.mp4":[2,2],
-    "pool_input.mp4":[5,10],
-
-    "car_red_input.mp4":[5,10],
-    "gun_input.mp4":[5,10],
-    "sakura_input.mp4":[10,15],
-
-    "cat_dog_input.mp4":[1,1],
-    "hamster_input.mp4":[5,10],
-    "sand_desert_input.mp4":[1,1],
-
-    "cat_white_input.mp4":[1,1],
-    "makima_input.mp4":[5,10],
-    "seal_input.mp4":[5,10],
-
-    "cyberpunkfox_input.mp4":[2,10],
-    "man_surfing_input.mp4":[1,1],
-    "tiger_input.mp4":[5,10],
-
-    "dance_spiderman_input.mp4":[2,2],
-    "music_input.mp4":[5,10],
-
-
-    "deer_white_input.mp4":[2,2],
-    "paladin_input.mp4":[5,10],
-    "woman_cg_input.mp4":[1,1],
-
-    "fox_greeting_input.mp4":[2,2],
-    "panther_input.mp4":[10,15],
-    "woman_input.mp4":[10,15]
-
-
+    "boxer_cartoon_input.mp4": [2,2],
+    "glass_cg_input.mp4": [2,2],
+    "pool_input.mp4": [5,10],
+    "car_red_input.mp4": [5,10],
+    "gun_input.mp4": [5,10],
+    "sakura_input.mp4": [10,15],
+    "cat_dog_input.mp4": [1,1],
+    "hamster_input.mp4": [5,10],
+    "sand_desert_input.mp4": [1,1],
+    "cat_white_input.mp4": [1,1],
+    "makima_input.mp4": [5,10],
+    "seal_input.mp4": [5,10],
+    "cyberpunkfox_input.mp4": [2,10],
+    "man_surfing_input.mp4": [1,1],
+    "tiger_input.mp4": [5,10],
+    "dance_spiderman_input.mp4": [2,2],
+    "music_input.mp4": [5,10],
+    "deer_white_input.mp4": [2,2],
+    "paladin_input.mp4": [5,10],
+    "woman_cg_input.mp4": [1,1],
+    "fox_greeting_input.mp4": [2,2],
+    "panther_input.mp4": [10,15],
+    "woman_input.mp4": [10,15],
+    "basketball-man-120.mp4": [5,10],
+    "dog-in-car-200.mp4": [5,10],
+    "eagle-200.mp4": [10,15],
+    "woman-running-120.mp4": [10,15],
+    "wolf-40.mp4": [5,5],
+    "tesla-200.mp4": [10,15],
+    "man-56.mp4": [5,10],
+    "cats-88.mp4": [2,5],
+    "bread-80.mp4": [2,5]
 }
-

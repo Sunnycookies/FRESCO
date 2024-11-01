@@ -2,13 +2,13 @@ import os
 import yaml
 import json
 import argparse
-os.environ['CUDA_VISIBLE_DEVICES'] = '3'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 # os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-e', '--edit', type=str, default='pnp', choices=['pnp', 'SDEdit'])
-parser.add_argument('-s', '--synth', type=str, default='Tokenflow', choices=['Tokenflow', 'ebsynth', 'None', 'mixed'])
+parser.add_argument('-s', '--synth', type=str, default='Tokenflow', choices=['Tokenflow', 'ebsynth', 'None', 'Mixed'])
 parser.add_argument('-m', '--mirror', action='store_true')
 parser.add_argument('-f', '--fresco', action='store_true')
 args = parser.parse_args()
@@ -24,10 +24,7 @@ edit_method = args.edit
 synth_method = args.synth
 use_fresco = args.fresco
 
-if edit_method == 'SDEdit':
-    video_dir = fresco_path + '/data/videos'
-else:
-    video_dir = fresco_path + '/data/tokenflow_supp_videos'
+video_dir = fresco_path + '/data/videos'
 prompts = video_dir + '/prompts.json'
 key_intervs = video_dir + '/key_interv.json'
 inv_prompts = video_dir + '/inv_prompts.json'
@@ -35,7 +32,8 @@ inv_prompts = video_dir + '/inv_prompts.json'
 ref_yaml = fresco_path + '/config/ref_config.yaml'
 refs = fresco_path + '/cfg.json'
 
-run_ebsynth = synth_method == 'ebsynth'
+run_ebsynth = synth_method in ['ebsynth', 'Mixed']
+run_tokenflow = synth_method in ['Tokenflow', 'Mixed']
 
 use_warp_noise = False
 use_saliency = False
@@ -45,12 +43,17 @@ if edit_method == 'pnp':
     use_inv_noise = True
     use_inv_prompts = True
 
-all_as_key = False or synth_method not in ['Tokenflow', 'ebsynth']
+all_as_key = False or synth_method == 'None'
 keyframe_select_mode = 'fixed'
 keyframe_select_radix = 6
 if all_as_key:
     keyframe_select_radix = 1
     keyframe_select_mode = 'fixed'
+
+primary_select = synth_method == 'Mixed'
+primary_select_radix = 4
+if not primary_select:
+    primary_select_radix = 1
 
 default_sd = 'stabilityai/stable-diffusion-2-1-base'
 
@@ -75,7 +78,7 @@ for name, prompts in prompt_dict.items():
     print(prompts)
 
     # process item control
-    if file_name not in ['bread-80', 'man-56', 'wolf-40', 'cats-88']:
+    if file_name not in ['bread-80']:
         continue
 
     with open(ref_yaml,'r') as f:
@@ -90,6 +93,7 @@ for name, prompts in prompt_dict.items():
     config_yaml['warp_noise'] = use_warp_noise
     config_yaml['use_saliency'] = use_saliency
     config_yaml['run_ebsynth'] = run_ebsynth
+    config_yaml['run_tokenflow'] = run_tokenflow
     config_yaml['use_controlnet'] = edit_method == 'SDEdit'
     config_yaml['use_inv_noise'] = use_inv_noise
     
@@ -100,6 +104,8 @@ for name, prompts in prompt_dict.items():
         config_yaml['mininterv'] = config_yaml['maxinterv'] = 1
     config_yaml['keyframe_select_mode'] = keyframe_select_mode
     config_yaml['keyframe_select_radix'] = keyframe_select_radix
+    config_yaml['primary_select'] = primary_select
+    config_yaml['primary_select_radix'] = primary_select_radix
 
     # save video path
     suffix = f"test-{config_yaml['synth_mode']}-{config_yaml['edit_mode']}-"

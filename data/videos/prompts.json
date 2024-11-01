@@ -1,26 +1,114 @@
 {
-    "boxer_cartoon_input.mp4":["A black boxer wearing black boxing gloves punches towards the camera, cartoon style"],
-    "glass_cg_input.mp4":["A beautiful woman holding her glasses in CG style"],
-    "pool_input.mp4":["A woman swimming in the pool in cartoon style"],
-    "car_red_input.mp4":["A red car turns in the winter"],
-    "gun_input.mp4":["A woman raises a gun, golden hair, white pearl necklace, high saturation, high contrast"],
-    "sakura_input.mp4":["Cartoon Haruno Sakura looking in the railway station, flat, 2D "],
-    "cat_dog_input.mp4":["A dog in the grass in the sun"],
-    "hamster_input.mp4":["A white cat walking on the piano in cartoon style","A hamster walking on the piano in cartoon style"],
-    "sand_desert_input.mp4":["Shower of sand in desert"],
-    "cat_white_input.mp4":["A white cat in pink background"],
-    "makima_input.mp4":["A red hair girl wearing a white uniform is talking to the camera in the night"],
-    "seal_input.mp4":["A blue seal on the beach"],
-    "cyberpunkfox_input.mp4":["A cyberpunk fox in the cyberpunk style"],
-    "man_surfing_input.mp4":["A man surfing in the sea"],
-    "tiger_input.mp4":["A tiger in cartoon style"],
-    "dance_spiderman_input.mp4":["A cartoon spiderman in black suit, black shoes and white gloves is dancing"],
-    "music_input.mp4":["A beautiful woman with headphones listening to music in CG cyberpunk style, neon"],
-    "deer_white_input.mp4":["A white deer in the snow, cartoon, flat"],
-    "paladin_input.mp4":["A paladin walks in the dark forest carrying a holy sword"],
-    "woman_cg_input.mp4":["A beautiful woman in CG style"],
-    "fox_greeting_input.mp4":["Greetings from a fox by shaking front paws"],
-    "panther_input.mp4":["A black panther in CG style"],
-    "woman_input.mp4":["A beautiful grandma, white hair"]
+    "boxer_cartoon_input.mp4": [
+        "A black boxer wearing black boxing gloves punches towards the camera, cartoon style"
+    ],
+    "glass_cg_input.mp4": [
+        "A beautiful woman holding her glasses in CG style"
+    ],
+    "pool_input.mp4": [
+        "A woman swimming in the pool in cartoon style"
+    ],
+    "car_red_input.mp4": [
+        "A red car turns in the winter"
+    ],
+    "gun_input.mp4": [
+        "A woman raises a gun, golden hair, white pearl necklace, high saturation, high contrast"
+    ],
+    "sakura_input.mp4": [
+        "Cartoon Haruno Sakura looking in the railway station, flat, 2D "
+    ],
+    "cat_dog_input.mp4": [
+        "A dog in the grass in the sun"
+    ],
+    "hamster_input.mp4": [
+        "A white cat walking on the piano in cartoon style",
+        "A hamster walking on the piano in cartoon style"
+    ],
+    "sand_desert_input.mp4": [
+        "Shower of sand in desert"
+    ],
+    "cat_white_input.mp4": [
+        "A white cat in pink background"
+    ],
+    "makima_input.mp4": [
+        "A red hair girl wearing a white uniform is talking to the camera in the night"
+    ],
+    "seal_input.mp4": [
+        "A blue seal on the beach"
+    ],
+    "cyberpunkfox_input.mp4": [
+        "A cyberpunk fox in the cyberpunk style"
+    ],
+    "man_surfing_input.mp4": [
+        "A man surfing in the sea"
+    ],
+    "tiger_input.mp4": [
+        "A tiger in cartoon style"
+    ],
+    "dance_spiderman_input.mp4": [
+        "A cartoon spiderman in black suit, black shoes and white gloves is dancing"
+    ],
+    "music_input.mp4": [
+        "A beautiful woman with headphones listening to music in CG cyberpunk style, neon"
+    ],
+    "deer_white_input.mp4": [
+        "A white deer in the snow, cartoon, flat"
+    ],
+    "paladin_input.mp4": [
+        "A paladin walks in the dark forest carrying a holy sword"
+    ],
+    "woman_cg_input.mp4": [
+        "A beautiful woman in CG style"
+    ],
+    "fox_greeting_input.mp4": [
+        "Greetings from a fox by shaking front paws"
+    ],
+    "panther_input.mp4": [
+        "A black panther in CG style"
+    ],
+    "woman_input.mp4": [
+        "A beautiful grandma, white hair"
+    ],
+    "basketball-man-120.mp4": [
+        "Van-Gogh style portrait of a man spinning a basketball",
+        "a silver shiny robot spinning a shiny silver ball on his finger",
+        "the milky way, a star wars clone trooper spinning a planet"
+    ],
+    "dog-in-car-200.mp4": [
+        "Sahara desert, a cheeta looking out the car window",
+        "The dolomites, a bear cub looking out of a car window",
+        "Machu pichu, a wolf looking out of a car window"
+    ],
+    "eagle-200.mp4": [
+        "a bronze eagle sculpture",
+        "an origami of an eagle, colorful japanses washi patterns",
+        "an origami of an eagle, pink paper art"
+    ],
+    "woman-running-120.mp4": [
+        "a pixar animation of a woman running",
+        "a marble scuplture of a woman running",
+        "Maui in Moana Movie"
+    ],
+    "wolf-40.mp4": [
+        "a shiny silver robotic wolf, futuristic",
+        "a colorful polygonal illustration of a wolf",
+        "a photo of a fluffy wolf doll"
+    ],
+    "tesla-200.mp4": [
+        "a pink car in a snowy landscape, sunset lighting",
+        "an ice sculpture of a car",
+        "a sand sculpture of a car on the beach"
+    ],
+    "man-56.mp4": [
+        "a greek marble sculpture",
+        "Van-Gogh style portrait"
+    ],
+    "cats-88.mp4": [
+        "colorful crochet kittens",
+        "shiny silver robotic cats eating"
+    ],
+    "bread-80.mp4": [
+        "an ice sculpture",
+        "a metal sculpture"
+    ]
 }
-

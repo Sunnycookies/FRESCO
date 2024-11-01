@@ -14,7 +14,7 @@ import diffusers
 from diffusers import StableDiffusionPipeline, AutoencoderKL, DDPMScheduler, ControlNetModel, DDIMScheduler
 
 from src.utils import *
-from src.keyframe_selection import get_keyframe_ind
+from src.keyframe_selection import get_keyframe_ind, get_keyframe_ind_extend
 from src.diffusion_hacked import apply_FRESCO_attn, apply_FRESCO_opt, disable_FRESCO_opt, register_conv_control_efficient
 from src.diffusion_hacked import get_flow_and_interframe_paras, get_intraframe_paras, get_flow_and_interframe_paras_warped
 from src.pipe_FRESCO import inference, inference_extended
@@ -253,14 +253,14 @@ def run_keyframe_translation(config):
             flows_centralized = None
         
         #  TEST
-        if config['synth_mode'] == 'Tokenflow':
+        if config['run_tokenflow']:
             # register_pivotal(pipe.unet, True)
             deactivate_tokenflow(pipe.unet)
             
         correlation_matrix = get_intraframe_paras(pipe, imgs_torch, frescoProc, 
                             prompt_embeds, seed = config['seed'])
         
-        if config['synth_mode'] == 'Tokenflow':
+        if config['run_tokenflow']:
             # register_pivotal(pipe.unet, False)
             set_tokenflow(pipe.unet, 'SDEdit')
 
@@ -301,7 +301,7 @@ def run_keyframe_translation(config):
                   do_classifier_free_guidance, config['seed'], guidance_scale, config['use_controlnet'],         
                   record_latents, propagation_mode,
                   flows = flows, occs = occs, saliency=saliency, repeat_noise=False, 
-                  img_idx = img_idx, use_tokenflow = config['synth_mode'] == 'Tokenflow', imgs_all = imgs_all, edges_all = edges_all,
+                  img_idx = img_idx, use_tokenflow = config['run_tokenflow'], imgs_all = imgs_all, edges_all = edges_all,
                   warp_noise = config['warp_noise'], flows_centralized = flows_centralized, flow_model = flow_model, sod_model = sod_model, dilate = dilate
                     )
 
@@ -310,7 +310,7 @@ def run_keyframe_translation(config):
         
         with torch.no_grad():
             # memory saving image decode for tokenflow.
-            if config['synth_mode'] == 'Tokenflow':
+            if config['run_tokenflow']:
                 start = 2 if propagation_mode else 0
                 size = len(latents)
                 image = []
@@ -376,14 +376,12 @@ def run_keyframe_translation_exntended(config):
     
     video_cap = cv2.VideoCapture(config['file_path'])
     frame_num = int(video_cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    
-    # you can set extra_prompts for individual keyframe
-    # for example, extra_prompts[38] = ', closed eyes' to specify the person frame38 closes the eyes
-    extra_prompts = [''] * frame_num
-    
-    keys = get_keyframe_ind(config['file_path'], frame_num, config['mininterv'], config['maxinterv'],
-                            mode=config['keyframe_select_mode'], radix=config['keyframe_select_radix'],
-                            extended=True)
+
+    primary_indexes = list(range(0, frame_num, config['primary_select_radix']))
+    if config['primary_select']:
+        print(f'choose primary indexes {primary_indexes}')
+    keys = get_keyframe_ind_extend(config['file_path'], config['keyframe_select_mode'], config['keyframe_select_radix'], 
+                                   primary_indexes, config['mininterv'], config['maxinterv'])
     sublists_all = []
     for ind in range(len(keys)):
         sublists = [keys[ind][i:i+config['batch_size']-2] for i in range(2, len(keys[ind]), config['batch_size']-2)]
@@ -403,6 +401,10 @@ def run_keyframe_translation_exntended(config):
         # keylists.append(list(np.unique(keys_all)))
         keylists.append(keys_all)
     print(f"split keyframes into groups {keylists}")
+
+    # you can set extra_prompts for individual keyframe
+    # for example, extra_prompts[38] = ', closed eyes' to specify the person frame38 closes the eyes
+    extra_prompts = [''] * frame_num
 
     os.makedirs(config['save_path'], exist_ok=True)
     if os.path.exists(config['save_path']+'keys'):
@@ -440,7 +442,10 @@ def run_keyframe_translation_exntended(config):
         if config['run_ebsynth']:
             Image.fromarray(img).save(os.path.join(config['save_path'], 'video/%04d.png'%(i)))
         
-        if i not in keylists[batch_ind] and config['synth_mode'] != 'Tokenflow':
+        if i not in primary_indexes:
+            continue
+
+        if i not in keylists[batch_ind] and not config['run_tokenflow']:
             continue
 
         imgs += [img]
@@ -449,8 +454,8 @@ def run_keyframe_translation_exntended(config):
         if batch_ind < len(keylists) - 1:
             if i != keylists[batch_ind][-1]:
                 continue
-        elif config['synth_mode'] == 'Tokenflow':
-            if i != frame_num - 1:
+        elif config['run_tokenflow']:
+            if i != primary_indexes[-1]:
                 continue
         elif i != keylists[batch_ind][-1]:
             continue
@@ -461,10 +466,10 @@ def run_keyframe_translation_exntended(config):
 
         prompts = [base_prompt + a_prompt + extra_prompts[ind] for ind in img_idx]
         if propagation_mode:
-            if config['synth_mode'] != 'Tokenflow':
-                assert len(img_idx) == len(keylists[batch_ind]) + 2
+            if config['run_tokenflow']:
+                assert len(img_idx) == (img_idx[-1] - keylists[batch_ind - 1][-1]) / config['primary_select_radix'] + 2
             else:
-                assert len(img_idx) ==  img_idx[-1] - keylists[batch_ind - 1][-1] + 2
+                assert len(img_idx) == len(keylists[batch_ind]) + 2
             prompts = ref_prompts + prompts
         inv_prompts = [config['inv_prompt']] * len(img_idx)
 
@@ -479,7 +484,7 @@ def run_keyframe_translation_exntended(config):
                         for keygroup in sublists_all[batch_ind]]
 
         print(f"keyframe indexes of images {sublists_all[batch_ind]}")
-        # print(f"keyframe indexes of position {keylists_pos}"")
+        print(f"keyframe indexes of position {keylists_pos}")
 
         gc.collect()
         torch.cuda.empty_cache()
@@ -487,7 +492,7 @@ def run_keyframe_translation_exntended(config):
         latents = inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, img_idx, keylists_pos, n_prompt, 
                                      prompts, inv_prompts, config['inv_latent_path'], config['end_opt_step'], propagation_mode, 
                                      False, config['warp_noise'], config['use_fresco'], do_classifier_free_guidance, 
-                                     config['synth_mode'] == 'Tokenflow', config['edit_mode'], False, config['use_controlnet'], 
+                                     config['run_tokenflow'], config['edit_mode'], False, config['use_controlnet'], 
                                      config['use_saliency'], config['use_inv_noise'], cond_scale, config['num_inference_steps'], 
                                      config['num_warmup_steps'], config['seed'], guidance_scale, record_latent,
                                      flow_model=flow_model, sod_model=sod_model, dilate=dilate)
@@ -518,9 +523,9 @@ def run_keyframe_translation_exntended(config):
         ref_prompts = [prompts[0], prompts[-1]]
         if batch_ind == len(keylists):
             break
-
-    if config['synth_mode'] == 'Tokenflow':
-        keys = [i for i in range(frame_num)]
+    
+    if config['run_tokenflow']:
+        keys = primary_indexes
     else:
         keys = keys[config['num_inference_steps'] % len(keys)]
 
@@ -545,7 +550,9 @@ def run_full_video_translation(config, keys):
         video_name += '_warp'
     if config['keyframe_select_radix'] == 1:
         video_name += '_key'
-    if config['synth_mode'] == 'Tokenflow' or config['maxinterv'] == 1:
+
+    n_frames = int(video_cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    if len(keys) == n_frames:
         cmd = f"python to_video_multi.py -r {config['save_path']} -o {config['save_path']} -n {video_name} -f {fps}"
         print('\n```')
         print(cmd)
@@ -556,9 +563,6 @@ def run_full_video_translation(config, keys):
         print('\n' + '=' * 100)
         print('Done')
         return
-
-    if not config['run_ebsynth']:
-        print('to translate full video with ebsynth, install ebsynth and run:')
     else:
         print('translating full video with:')
 
