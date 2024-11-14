@@ -82,9 +82,14 @@ def get_models(config):
     if config['edit_mode'] == 'SDEdit':
         pipe.scheduler = DDPMScheduler.from_config(pipe.scheduler.config)
     else:
-        pipe.scheduler = DDIMScheduler.from_pretrained(config['sd_path'] ,subfolder="scheduler", local_files_only=local_files_only)
+        pipe.scheduler = DDIMScheduler.from_pretrained(config['sd_path'], subfolder="scheduler", local_files_only=local_files_only)
     # pipe.scheduler = DDIMScheduler.from_config(pipe.scheduler.config)
-    #noise_scheduler = DDPMScheduler.from_pretrained("runwayml/stable-diffusion-v1-5", subfolder="scheduler")
+    # noise_scheduler = DDPMScheduler.from_pretrained("runwayml/stable-diffusion-v1-5", subfolder="scheduler")
+    # num_train_timesteps = len(pipe.scheduler.timesteps)
+    # k = 0.015
+    # t_0 = 0
+    # times = torch.linspace(t_0, num_train_timesteps, num_train_timesteps, dtype=torch.float32)
+    # pipe.scheduler.alphas_cumprod = 1 / (1 + torch.exp(-k * (times - t_0)))
     pipe.to("cuda")
     pipe.scheduler.set_timesteps(config['num_inference_steps'], device=pipe._execution_device)
     
@@ -377,9 +382,12 @@ def run_keyframe_translation_exntended(config):
     video_cap = cv2.VideoCapture(config['file_path'])
     frame_num = int(video_cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    primary_indexes = list(range(0, frame_num, config['primary_select_radix']))
     if config['primary_select']:
+        primary_indexes = get_keyframe_ind(config['file_path'], mininterv=config['mininterv'], maxinterv=config['maxinterv'])
         print(f'choose primary indexes {primary_indexes}')
+    else:
+        primary_indexes = list(range(frame_num))
+    primary_indexes_posmap = {primary_indexes[i]:i for i in range(len(primary_indexes))}
     keys = get_keyframe_ind_extend(config['file_path'], config['keyframe_select_mode'], config['keyframe_select_radix'], 
                                    primary_indexes, config['mininterv'], config['maxinterv'])
     sublists_all = []
@@ -467,7 +475,7 @@ def run_keyframe_translation_exntended(config):
         prompts = [base_prompt + a_prompt + extra_prompts[ind] for ind in img_idx]
         if propagation_mode:
             if config['run_tokenflow']:
-                assert len(img_idx) == (img_idx[-1] - keylists[batch_ind - 1][-1]) / config['primary_select_radix'] + 2
+                assert len(img_idx) == primary_indexes_posmap[img_idx[-1]] - primary_indexes_posmap[keylists[batch_ind - 1][-1]] + 2
             else:
                 assert len(img_idx) == len(keylists[batch_ind]) + 2
             prompts = ref_prompts + prompts
@@ -490,12 +498,12 @@ def run_keyframe_translation_exntended(config):
         torch.cuda.empty_cache()
 
         latents = inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, img_idx, keylists_pos, n_prompt, 
-                                     prompts, inv_prompts, config['inv_latent_path'], config['end_opt_step'], propagation_mode, 
-                                     False, config['warp_noise'], config['use_fresco'], do_classifier_free_guidance, 
-                                     config['run_tokenflow'], config['edit_mode'], False, config['use_controlnet'], 
-                                     config['use_saliency'], config['use_inv_noise'], cond_scale, config['num_inference_steps'], 
-                                     config['num_warmup_steps'], config['seed'], guidance_scale, record_latent,
-                                     flow_model=flow_model, sod_model=sod_model, dilate=dilate)
+                                     prompts, inv_prompts, config['inv_latent_path'], config['temp_paras_save_path'], 
+                                     config['end_opt_step'], propagation_mode, False, config['warp_noise'], config['use_fresco'], 
+                                     do_classifier_free_guidance, config['run_tokenflow'], config['edit_mode'], False, 
+                                     config['use_controlnet'], config['use_saliency'], config['use_inv_noise'], cond_scale, 
+                                     config['num_inference_steps'], config['num_warmup_steps'], config['seed'], guidance_scale, 
+                                     record_latent, flow_model=flow_model, sod_model=sod_model, dilate=dilate)
 
         gc.collect()
         torch.cuda.empty_cache()
@@ -535,14 +543,15 @@ def run_keyframe_translation_exntended(config):
     return keys
 
 def run_full_video_translation(config, keys):
+    gc.collect()
+    torch.cuda.empty_cache()
+
     print('\n' + '=' * 100)
     video_cap = cv2.VideoCapture(config['file_path'])
     fps = int(video_cap.get(cv2.CAP_PROP_FPS))
     video_name = config['file_path'].split('/')[-1]
-    if config['edit_mode'] == 'SDEdit':
-        video_name = video_name.split('_')[0]
-    else:
-        video_name = video_name.split('-')[0]
+    video_name = video_name.split('-')[0]
+    video_name = video_name.split('_')[0]
     video_name += f"_{config['edit_mode']}_{config['synth_mode']}_{config['keyframe_select_mode']}"
     if not config['use_fresco']:
         video_name += '_no-fresco'

@@ -2,7 +2,7 @@ import os
 import yaml
 import json
 import argparse
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '4'
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 # os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 
@@ -24,7 +24,18 @@ edit_method = args.edit
 synth_method = args.synth
 use_fresco = args.fresco
 
-video_dir = fresco_path + '/data/videos'
+if edit_method == 'SDEdit':
+    video_dir = fresco_path + '/data/videos'
+    video_list = [
+        'pool_input', 
+        # 'music_input' ,
+        ]
+else:
+    video_dir = fresco_path + '/data/tokenflow_supp_videos'
+    video_list = [
+        # 'basketball-man-120', 
+        'tesla-200',
+        ]
 prompts = video_dir + '/prompts.json'
 key_intervs = video_dir + '/key_interv.json'
 inv_prompts = video_dir + '/inv_prompts.json'
@@ -43,17 +54,14 @@ if edit_method == 'pnp':
     use_inv_noise = True
     use_inv_prompts = True
 
+primary_select = synth_method == 'Mixed'
+
 all_as_key = False or synth_method == 'None'
 keyframe_select_mode = 'fixed'
-keyframe_select_radix = 6
+keyframe_select_radix = 4
 if all_as_key:
     keyframe_select_radix = 1
     keyframe_select_mode = 'fixed'
-
-primary_select = synth_method == 'Mixed'
-primary_select_radix = 4
-if not primary_select:
-    primary_select_radix = 1
 
 default_sd = 'stabilityai/stable-diffusion-2-1-base'
 
@@ -78,7 +86,7 @@ for name, prompts in prompt_dict.items():
     print(prompts)
 
     # process item control
-    if file_name not in ['bread-80']:
+    if file_name not in video_list:
         continue
 
     with open(ref_yaml,'r') as f:
@@ -102,10 +110,13 @@ for name, prompts in prompt_dict.items():
     config_yaml['maxinterv'] = key_dict[name][1]
     if all_as_key:
         config_yaml['mininterv'] = config_yaml['maxinterv'] = 1
+    elif edit_method == 'pnp':
+        config_yaml['mininterv'] = config_yaml['maxinterv'] = keyframe_select_radix
     config_yaml['keyframe_select_mode'] = keyframe_select_mode
+    if config_yaml['keyframe_select_mode'] == 'loop':
+        config_yaml['mininterv'] = config_yaml['maxinterc'] = keyframe_select_radix
     config_yaml['keyframe_select_radix'] = keyframe_select_radix
     config_yaml['primary_select'] = primary_select
-    config_yaml['primary_select_radix'] = primary_select_radix
 
     # save video path
     suffix = f"test-{config_yaml['synth_mode']}-{config_yaml['edit_mode']}-"
@@ -152,6 +163,7 @@ for name, prompts in prompt_dict.items():
     inv_latent_save_path = os.path.join(save_path, inv_path_name, file_name, f"inv_step_{config_yaml['inv_inference_steps']}")
     config_yaml['inv_save_path'] = inv_latent_save_path
     config_yaml['inv_latent_path'] = os.path.join(inv_latent_save_path, 'latents')
+    config_yaml['temp_paras_save_path'] = os.path.join(fresco_path, 'paras')
     
     # inversion noise produce
     if use_inv_noise and (not os.path.exists(config_yaml['inv_latent_path']) or len(os.listdir(config_yaml['inv_latent_path'])) == 0):

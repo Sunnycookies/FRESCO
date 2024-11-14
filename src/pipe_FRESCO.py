@@ -721,11 +721,11 @@ def inference(pipe, controlnet, frescoProc,
 @torch.autocast(dtype=torch.float16, device_type='cuda')
 @torch.no_grad()
 def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, img_idxs, keylists, n_prompt, prompts, inv_prompts, 
-                       inv_latent_path, end_opt_step, propagation_mode, repeat_noise = False, warp_noise = False, use_fresco = True,
-                       do_classifier_free_guidance = True, use_tokenflow = False, edit_mode = 'SDEdit', visualize_pipeline = False, 
-                       use_controlnet = True, use_saliency = False, use_inv_noise = False, cond_scale = [0.7] * 20, 
-                       num_inference_steps = 20, num_warmup_steps = 6, seed = 0, guidance_scale = 7.5, record_latents = [],  
-                       num_intraattn_steps = 1, step_interattn_end = 350, bg_smoothing_steps = [16, 17], 
+                       inv_latent_path, paras_save_path, end_opt_step, propagation_mode, repeat_noise = False, warp_noise = False, 
+                       use_fresco = True, do_classifier_free_guidance = True, use_tokenflow = False, edit_mode = 'SDEdit', 
+                       visualize_pipeline = False, use_controlnet = True, use_saliency = False, use_inv_noise = False, 
+                       cond_scale = [0.7] * 20, num_inference_steps = 20, num_warmup_steps = 6, seed = 0, guidance_scale = 7.5, 
+                       record_latents = [],  num_intraattn_steps = 1, step_interattn_end = 350, bg_smoothing_steps = [16, 17], 
                        flow_model = None, sod_model = None, dilate = None):
 
     gc.collect()
@@ -804,19 +804,23 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, img
 
     keys_loop_len = len(keylists)
 
-    # memory used to store parameters
-    flows_mem = []
-    occs_mem = []
-    flows_centralized_mem = []
-    attn_mask_mem = []
-    interattn_paras_mem = []
-    saliency_mem = []
-    correlation_matrix_mem = []
+    # prepare parameters
+    print("preparing parameters...")
 
-    # prepare parameters for inter-frame and intra-frame consistency
+    if os.path.exists(paras_save_path):
+        os.system(f"rm -rf {paras_save_path}")
+    image_edit_paras_path = os.path.join(paras_save_path, 'image_edit')
+    os.makedirs(image_edit_paras_path)
+    if use_tokenflow:
+        tokenflow_paras_path = os.path.join(paras_save_path, 'tokenflow')
+        os.makedirs(tokenflow_paras_path)
+        tokenflow_decoder_attn_store_path = os.path.join(paras_save_path, 'tokenflow_decoder_attn')
+        os.makedirs(tokenflow_decoder_attn_store_path)
+
     frescoProc.controller.enable_intraattn(True)
     if use_tokenflow:
         deactivate_tokenflow(pipe.unet)
+        frescoProc.controller.set_tokenflow_store_path(tokenflow_decoder_attn_store_path)
 
     for ind, keygroup in enumerate(keylists):
         imgs_group = [imgs[i] for i in keygroup]
@@ -845,17 +849,58 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, img
             correlation_matrix_group = get_intraframe_paras(pipe, imgs_group_torch, frescoProc, prompt_embeds_group,
                                                             do_classifier_free_guidance, seed, False, True, ind)
         
-        flows_mem.append(flows_group)
-        occs_mem.append(occs_group)
-        flows_centralized_mem.append(flows_centralized_group)
-        attn_mask_mem.append(attn_mask_group)
-        interattn_paras_mem.append(interattn_paras_group)
-        saliency_mem.append(saliency_group)
-        correlation_matrix_mem.append(correlation_matrix_group)
+        paras = (saliency_group, flows_group, occs_group, attn_mask_group, interattn_paras_group, 
+                 flows_centralized_group, correlation_matrix_group)
+        torch.save(paras, os.path.join(image_edit_paras_path, f"paras_{ind}.pt"))
+
+        if use_tokenflow:
+            frescoProc.controller.enable_tokenflow()
+            for j, key in enumerate(keygroup):
+                end = len(latents) if key == keygroup[-1] else keygroup[j + 1]
+                if propagation_mode and key == 0:
+                    end = 1
+                
+                imgs_tokenflow = imgs[key:end]
+                imgs_tokenflow_torch = imgs_torch[key:end]
+                prompt_embeds_tokenflow = pipe._encode_prompt(
+                    prompts[key:end],
+                    device,
+                    1,
+                    do_classifier_free_guidance,
+                    [n_prompt] * (end - key)
+                )
+
+                saliency_tokenflow = get_saliency(imgs_tokenflow, sod_model, dilate) if use_saliency else None
+
+                if end - key > 1:
+                    if warp_noise:
+                        flows_tokenflow, occs_tokenflow, attn_mask_tokenflow, interattn_paras_tokenflow, \
+                            flows_centralized_tokenflow = get_flow_and_interframe_paras_warped(flow_model, imgs_tokenflow)
+                    else:
+                        flows_tokenflow, occs_tokenflow, attn_mask_tokenflow, interattn_paras_tokenflow \
+                            = get_flow_and_interframe_paras(flow_model, imgs_tokenflow)
+                        flows_centralized_tokenflow = None
+                    
+                    if edit_mode == 'pnp':
+                        correlation_matrix_tokenflow = []
+                    else:
+                        correlation_matrix_tokenflow = get_intraframe_paras(pipe, imgs_tokenflow_torch, frescoProc, prompt_embeds_tokenflow,
+                                                                            do_classifier_free_guidance, seed, False, True, ind)
+                else:
+                    flows_tokenflow, occs_tokenflow, attn_mask_tokenflow, interattn_paras_tokenflow, correlation_matrix_tokenflow, \
+                            flows_centralized_tokenflow = None, None, None, None, [], None
+
+                paras_tokenflow = (saliency_tokenflow, flows_tokenflow, occs_tokenflow, attn_mask_tokenflow, interattn_paras_tokenflow, 
+                                   flows_centralized_tokenflow, correlation_matrix_tokenflow)
+                torch.save(paras_tokenflow, os.path.join(tokenflow_paras_path, f"paras_{ind}_{j}.pt"))
+
+            frescoProc.controller.disable_tokenflow()
 
     if use_tokenflow:
         set_tokenflow(pipe.unet, edit_mode)
     frescoProc.controller.disable_intraattn(False)
+
+    print("parameters prepared!")
 
     gc.collect()
     torch.cuda.empty_cache()
@@ -869,13 +914,9 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, img
             # prepare a group of frame based on keygroup
             # print(f"processing keygroup [{i_ + 1}/{len(keylists)}] with keyframes {keygroup}")
 
-            flows = flows_mem[i_]
-            occs = occs_mem[i_]
-            attn_mask = attn_mask_mem[i_]
-            interattn_paras = interattn_paras_mem[i_]
-            flows_centralized = flows_centralized_mem[i_]
-            correlation_matrix = correlation_matrix_mem[i_]
-            saliency = saliency_mem[i_]
+            paras = torch.load(os.path.join(image_edit_paras_path, f"paras_{i_}.pt"))
+
+            saliency, flows, occs, attn_mask, interattn_paras, flows_centralized, correlation_matrix = paras
 
             if edit_mode == 'pnp':
                 ref_inv_latent = load_source_latents_t(t, inv_latent_path)[img_idxs]
@@ -953,6 +994,7 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, img
 
             if use_fresco:
                 frescoProc.controller.disable_controller(False)
+                disable_FRESCO_opt(pipe, edit_mode)
             
             if not use_tokenflow:
                 if edit_mode == 'pnp':
@@ -974,10 +1016,24 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, img
                 if i == len(timesteps) - 1 or ((i + 1) > 0 and (i + 1) % pipe.scheduler.order == 0):
                     progress_bar.update()
 
+                if edit_mode == 'pnp':
+                    del(ref_inv_latent)
+
                 continue
+                
+            del(saliency)
+            del(flows)
+            del(occs)
+            del(attn_mask)
+            del(interattn_paras)
+            del(flows_centralized)
+            del(correlation_matrix)
 
             # using tokenflow method below
             register_pivotal(pipe.unet, False)       
+
+            if use_fresco:
+                frescoProc.controller.enable_tokenflow()
 
             denoised_latents = []
 
@@ -988,16 +1044,20 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, img
 
                 # print(f"conducting tokenflow on images [{key}:{end}]")
 
-                flows_, occs_, correlation_matrix_, saliency_ = None, None, None, None
+                paras = torch.load(os.path.join(tokenflow_paras_path, f"paras_{i_}_{j}.pt"))
+
+                saliency, flows, occs, attn_mask, interattn_paras, flows_centralized, correlation_matrix = paras
 
                 if use_fresco:
-                    flows_ = [flow[key:end] for flow in flows_all]
-                    occs_ = [occ[key:end] for occ in occs_all]
-                    correlation_matrix_ = correlation_matrix[key:end]
-                    saliency_ = saliency[key:end] if use_saliency else None
-                    apply_FRESCO_opt(pipe, steps = timesteps[:end_opt_step], flows = flows_, occs = occs_, 
-                                     correlation_matrix=correlation_matrix_, saliency=saliency_, 
+                    frescoProc.controller.enable_controller(interattn_paras, attn_mask, True, False, i_)
+                    apply_FRESCO_opt(pipe, steps = timesteps[:end_opt_step], flows = flows, occs = occs, 
+                                     correlation_matrix=correlation_matrix, saliency=saliency, 
                                      optimize_temporal = True, edit_mode=edit_mode)
+                    
+                    if i >= num_intraattn_steps:
+                        frescoProc.controller.disable_intraattn(False)
+                    if t < step_interattn_end:
+                        frescoProc.controller.disable_interattn()
 
                 register_batch_ind = j + (j > 0) - (key == keygroup[-1])
 
@@ -1052,16 +1112,22 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, img
                     return_dict=False,
                 )[0]
 
+                if use_fresco:
+                    frescoProc.controller.disable_controller(False)
+                    disable_FRESCO_opt(pipe, edit_mode)
+
                 if edit_mode == 'pnp':
                     noise_pred = torch.cat(list(noise_pred.chunk(3)[1:]))
 
                 if do_classifier_free_guidance:
                     noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
                     noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
-                
-                flows_centralized_ = [flow_c[key:end] for flow_c in flows_centralized_all] if warp_noise else None
-                if i + num_warmup_steps not in bg_smoothing_steps:
-                    flows_, occs_, saliency_ = None, None, None
+
+                flows_, occs_, saliency_, flows_centralized_ = None, None, None, None
+                if use_fresco and i + num_warmup_steps in bg_smoothing_steps:
+                    flows_, occs_, saliency_ = flows, occs, saliency
+                if use_fresco and warp_noise:
+                    flows_centralized_ = flows_centralized
                 
                 latents_batch = step_extended(pipe, noise_pred, t, full_latent, generator, visualize_pipeline=visualize_pipeline,
                                               flows=flows_, occs=occs_, saliency=saliency_, flows_centralized=flows_centralized_,
@@ -1069,7 +1135,21 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, img
                 
                 denoised_latents.append(latents_batch)
 
+                del(saliency)
+                del(flows)
+                del(occs)
+                del(attn_mask)
+                del(interattn_paras)
+                del(flows_centralized)
+                del(correlation_matrix)
+
+            if edit_mode == 'pnp':
+                del(ref_inv_latent)    
+
             latents = torch.cat(denoised_latents)
+
+            if use_fresco:
+                frescoProc.controller.disable_tokenflow()
 
             if i == len(timesteps) - 1 or ((i + 1) > 0 and (i + 1) % pipe.scheduler.order == 0):
                 progress_bar.update()
@@ -1077,6 +1157,8 @@ def inference_extended(pipe, controlnet, frescoProc, imgs, edges, timesteps, img
     if use_fresco:    
         frescoProc.controller.clear_store()
         frescoProc.controller.disable_controller()
+
+    os.system(f"rm -rf {paras_save_path}")
 
     gc.collect()
     torch.cuda.empty_cache()

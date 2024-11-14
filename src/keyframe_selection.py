@@ -22,7 +22,7 @@ def get_keyframe_ind(filename, lastframen = 1e10, mininterv = 5, maxinterv = 20,
     n_frames = max(1, min(int(video_cap.get(cv2.CAP_PROP_FRAME_COUNT)), lastframen))
     
     if maxinterv == mininterv:
-            return list(range(0, lastframen, mininterv))
+        return list(range(0, n_frames, mininterv))
     err = [0]
     preframe = None
     for i in range(n_frames):
@@ -68,8 +68,8 @@ def get_keyframe_ind_extend(filename, mode = 'fixed', radix = 1, indexes = [],
     
     # loop
     if mode == 'loop':
-        radix = min((len(indexes) - 1 // 3, radix))
-        return [[indexes[0]] + [indexes[j] for j in range(i, len(indexes, radix))] for i in range(1, radix + 1)]
+        radix = min((len(indexes) - 1 // 2, radix))
+        return [[indexes[0]] + [indexes[j] for j in range(i, len(indexes), radix)] for i in range(1, radix + 1)]
     
     # fixed
     if mininterv == maxinterv:
@@ -78,8 +78,6 @@ def get_keyframe_ind_extend(filename, mode = 'fixed', radix = 1, indexes = [],
     video_cap = cv2.VideoCapture(filename)
     n_frames = int(video_cap.get(cv2.CAP_PROP_FRAME_COUNT))
     n_frames = max(1, min(n_frames, lastframen))
-    if indexes == []:
-        indexes = list(range(n_frames))
 
     err = [0]
     preframe = None

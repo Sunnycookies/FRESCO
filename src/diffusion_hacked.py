@@ -41,6 +41,8 @@ class AttentionControl():
         self.intraattn_scale_factor = 0.2
         self.interattn_scale_factor = 0.2
         self.qk_injection_timesteps = []
+        self.tokenflow = False
+        self.tokenflow_store_path = None
     
     @staticmethod
     def get_empty_store():
@@ -55,6 +57,8 @@ class AttentionControl():
         gc.collect()
         self.stored_attn = self.get_empty_store()
         self.disable_intraattn()
+        if self.tokenflow_store_path is not None:
+            os.system(f"rm -rf {self.tokenflow_store_path}")
 
     # store attention feature of the input frame for spatial-guided attention
     def enable_store(self, multidim = False, group_ind = 0):
@@ -71,9 +75,15 @@ class AttentionControl():
             self.index = 0
         if not hasattr(self, "multi_index"):
             self.multi_index = [0, ]
+        if not hasattr(self, "multi_index_tokenflow"):
+            self.multi_index_tokenflow = [0, ]
+        if not hasattr(self, "multi_len_tokenflow"):
+            self.multi_len_tokenflow = [0, ]
         if reset:
             self.index = 0
             self.multi_index = [0, ]
+            self.multi_index_tokenflow = [0, ]
+            self.multi_len_tokenflow = [0, ]
         self.multidim = multidim
         self.group_ind = group_ind
         self.use_intraattn = True
@@ -86,9 +96,15 @@ class AttentionControl():
             self.index = 0
         if not hasattr(self, "multi_index"):
             self.multi_index = [0, ]
+        if not hasattr(self, "multi_index_tokenflow"):
+            self.multi_index_tokenflow = [0, ]
+        if not hasattr(self, "multi_len_tokenflow"):
+            self.multi_len_tokenflow = [0, ]
         if reset:
             self.index = 0
             self.multi_index = [0] * len(self.multi_index)
+            self.multi_index_tokenflow = [0] * len(self.multi_index_tokenflow)
+            self.multi_len_tokenflow = [0] * len(self.multi_len_tokenflow)
         self.use_intraattn = False
         self.disable_store()
 
@@ -137,31 +153,58 @@ class AttentionControl():
         self.enable_intraattn(multidim, reset, group_ind)
         self.enable_interattn(interattn_paras)
         self.enable_cfattn(attn_mask)    
+
+    def enable_tokenflow(self):
+        self.tokenflow = True
+
+    def set_tokenflow_store_path(self, store_path):
+        self.tokenflow_store_path = store_path
+    
+    def disable_tokenflow(self):
+        self.tokenflow = False
     
     def forward(self, context):
         if self.store:
             if not self.multidim:
                 self.stored_attn['decoder_attn'].append(context.detach())
+            elif self.tokenflow:
+                while(len(self.multi_len_tokenflow) < self.group_ind + 1):
+                    self.multi_len_tokenflow.append(0)
+                    self.multi_index_tokenflow.append(0)
+                p = os.path.join(self.tokenflow_store_path, f"decoder_attn_{self.group_ind}_{self.multi_len_tokenflow[self.group_ind]}.pt")
+                self.multi_len_tokenflow[self.group_ind] += 1
+                torch.save(context, p)
             else:
                 while(len(self.stored_attn['decoder_attn_multi']) < self.group_ind + 1):
                     self.stored_attn['decoder_attn_multi'].append([])
                     self.multi_index.append(0)
                 self.stored_attn['decoder_attn_multi'][self.group_ind].append(context.detach())
         if self.use_intraattn:
-            if not self.multidim and len(self.stored_attn['decoder_attn']) > 0:
-                tmp = self.stored_attn['decoder_attn'][self.index]
-                self.index = self.index + 1
-                if self.index >= len(self.stored_attn['decoder_attn']):
-                    self.index = 0
-                    self.disable_store()
-                return tmp
-            if self.multidim and len(self.stored_attn['decoder_attn_multi'][self.group_ind]) > 0:
-                tmp = self.stored_attn['decoder_attn_multi'][self.group_ind][self.multi_index[self.group_ind]]
-                self.multi_index[self.group_ind] = self.multi_index[self.group_ind] + 1
-                if self.multi_index[self.group_ind] >= len(self.stored_attn['decoder_attn_multi'][self.group_ind]):
-                    self.multi_index[self.group_ind] = 0
-                    self.disable_store()
-                return tmp
+            if not self.multidim:
+                if len(self.stored_attn['decoder_attn']) > 0:
+                    tmp = self.stored_attn['decoder_attn'][self.index]
+                    self.index += 1
+                    if self.index >= len(self.stored_attn['decoder_attn']):
+                        self.index = 0
+                        self.disable_store()
+                    return tmp
+            elif self.tokenflow:
+                if self.multi_len_tokenflow[self.group_ind] > 0:
+                    p = os.path.join(self.tokenflow_store_path, f"decoder_attn_{self.group_ind}_{self.multi_index_tokenflow[self.group_ind]}.pt")
+                    tmp = torch.load(p)
+                    self.multi_index_tokenflow[self.group_ind] += 1
+                    if self.multi_index_tokenflow[self.group_ind] >= self.multi_len_tokenflow[self.group_ind]:
+                        self.multi_index_tokenflow[self.group_ind] = 0
+                        self.disable_store()
+                    return tmp
+            else:
+                if len(self.stored_attn['decoder_attn_multi'][self.group_ind]) > 0:
+                    tmp = self.stored_attn['decoder_attn_multi'][self.group_ind][self.multi_index[self.group_ind]]
+                    self.multi_index[self.group_ind] += 1
+                    if self.multi_index[self.group_ind] >= len(self.stored_attn['decoder_attn_multi'][self.group_ind]):
+                        self.multi_index[self.group_ind] = 0
+                        self.disable_store()
+                    return tmp
         return context
     
     def set_qk_injection_timesteps(self, qk_injection_timesteps):
@@ -1537,11 +1580,11 @@ def apply_FRESCO_opt(pipe, steps = [], layers = [0,1,2,3], flows = None, occs = 
     elif edit_mode == 'pnp':
         pipe.unet.forward = my_forward_pnp(pipe.unet, steps, layers, flows, occs, 
              intra_weight, iters, optimize_temporal, saliency)
-def disable_FRESCO_opt(pipe):
+def disable_FRESCO_opt(pipe, edit_mode = 'SDEdit'):
     """
     Disable the FRESCO-based optimization
     """  
-    apply_FRESCO_opt(pipe, edit_mode='origin')
+    apply_FRESCO_opt(pipe, edit_mode=edit_mode)
 
 
 """
