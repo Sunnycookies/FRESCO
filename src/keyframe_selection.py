@@ -73,7 +73,7 @@ def get_keyframe_ind_extend(filename, mode = 'fixed', radix = 1, indexes = [],
     
     # fixed
     if mininterv == maxinterv:
-        return [[indexes[i] for i in range(0, len(indexes), radix)], ]
+        return [[indexes[i] for i in range(0, len(indexes), mininterv)], ]
     
     video_cap = cv2.VideoCapture(filename)
     n_frames = int(video_cap.get(cv2.CAP_PROP_FRAME_COUNT))

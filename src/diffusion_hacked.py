@@ -1,6 +1,7 @@
 from einops import rearrange, reduce, repeat
 import torch.nn.functional as F
 import torch
+import torchvision
 import gc
 from src.utils import *
 from src.flow_utils import get_mapping_ind, warp_tensor
@@ -30,8 +31,10 @@ class AttentionControl():
     """
     def __init__(self):
         self.stored_attn = self.get_empty_store()
+        self.index_groups = [0, ]
+        self.index_groups_tokenflow = [0, ]
+        self.len_groups_tokenflow = [0, ]
         self.store = False
-        self.index = 0
         self.attn_mask = None
         self.interattn_paras = None
         self.use_interattn = False
@@ -47,8 +50,7 @@ class AttentionControl():
     @staticmethod
     def get_empty_store():
         return {
-            'decoder_attn': [],
-            'decoder_attn_multi': [],
+            'decoder_attn_groups': [],
         }
     
     def clear_store(self):
@@ -61,30 +63,19 @@ class AttentionControl():
             os.system(f"rm -rf {self.tokenflow_store_path}")
 
     # store attention feature of the input frame for spatial-guided attention
-    def enable_store(self, multidim = False, group_ind = 0):
+    def enable_store(self, group_ind = 0):
         self.store = True
-        self.multidim = multidim
         self.group_ind = group_ind
         
     def disable_store(self):
         self.store = False  
 
     # spatial-guided attention
-    def enable_intraattn(self, multidim = False, reset = True, group_ind = 0):
-        if not hasattr(self, "index"):
-            self.index = 0
-        if not hasattr(self, "multi_index"):
-            self.multi_index = [0, ]
-        if not hasattr(self, "multi_index_tokenflow"):
-            self.multi_index_tokenflow = [0, ]
-        if not hasattr(self, "multi_len_tokenflow"):
-            self.multi_len_tokenflow = [0, ]
+    def enable_intraattn(self, reset = True, group_ind = 0):
         if reset:
-            self.index = 0
-            self.multi_index = [0, ]
-            self.multi_index_tokenflow = [0, ]
-            self.multi_len_tokenflow = [0, ]
-        self.multidim = multidim
+            self.index_groups = [0, ]
+            self.index_groups_tokenflow = [0, ]
+            self.len_groups_tokenflow = [0, ]
         self.group_ind = group_ind
         self.use_intraattn = True
         self.disable_store()
@@ -92,19 +83,10 @@ class AttentionControl():
         #     self.use_intraattn = False
         
     def disable_intraattn(self, reset = True):
-        if not hasattr(self, "index"):
-            self.index = 0
-        if not hasattr(self, "multi_index"):
-            self.multi_index = [0, ]
-        if not hasattr(self, "multi_index_tokenflow"):
-            self.multi_index_tokenflow = [0, ]
-        if not hasattr(self, "multi_len_tokenflow"):
-            self.multi_len_tokenflow = [0, ]
         if reset:
-            self.index = 0
-            self.multi_index = [0] * len(self.multi_index)
-            self.multi_index_tokenflow = [0] * len(self.multi_index_tokenflow)
-            self.multi_len_tokenflow = [0] * len(self.multi_len_tokenflow)
+            self.index_groups = [0] * len(self.index_groups)
+            self.index_groups_tokenflow = [0] * len(self.index_groups_tokenflow)
+            self.len_groups_tokenflow = [0] * len(self.len_groups_tokenflow)
         self.use_intraattn = False
         self.disable_store()
 
@@ -144,13 +126,17 @@ class AttentionControl():
                 print('Warning: no valid temporal-guided attention parameters available!')
                 self.disable_interattn()
     
-    def disable_controller(self, reset = True):
+    def disable_controller(self, reset=True):
         self.disable_intraattn(reset)
         self.disable_interattn()
         self.disable_cfattn()
     
-    def enable_controller(self, interattn_paras=None, attn_mask=None, multidim = False, reset = True, group_ind = 0):
-        self.enable_intraattn(multidim, reset, group_ind)
+    def enable_controller(self, interattn_paras=None, attn_mask=None, reset=True, group_ind=0):
+        """
+        reset: clear all intra attention data storage if reset=True
+        group_ind: the current intra attention data group number
+        """
+        self.enable_intraattn(reset, group_ind)
         self.enable_interattn(interattn_paras)
         self.enable_cfattn(attn_mask)    
 
@@ -165,44 +151,34 @@ class AttentionControl():
     
     def forward(self, context):
         if self.store:
-            if not self.multidim:
-                self.stored_attn['decoder_attn'].append(context.detach())
-            elif self.tokenflow:
-                while(len(self.multi_len_tokenflow) < self.group_ind + 1):
-                    self.multi_len_tokenflow.append(0)
-                    self.multi_index_tokenflow.append(0)
-                p = os.path.join(self.tokenflow_store_path, f"decoder_attn_{self.group_ind}_{self.multi_len_tokenflow[self.group_ind]}.pt")
-                self.multi_len_tokenflow[self.group_ind] += 1
+            if self.tokenflow:
+                while(len(self.len_groups_tokenflow) < self.group_ind + 1):
+                    self.len_groups_tokenflow.append(0)
+                    self.index_groups_tokenflow.append(0)
+                p = os.path.join(self.tokenflow_store_path, f"decoder_attn_{self.group_ind}_{self.len_groups_tokenflow[self.group_ind]}.pt")
+                self.len_groups_tokenflow[self.group_ind] += 1
                 torch.save(context, p)
             else:
-                while(len(self.stored_attn['decoder_attn_multi']) < self.group_ind + 1):
-                    self.stored_attn['decoder_attn_multi'].append([])
-                    self.multi_index.append(0)
-                self.stored_attn['decoder_attn_multi'][self.group_ind].append(context.detach())
+                while(len(self.stored_attn['decoder_attn_groups']) < self.group_ind + 1):
+                    self.stored_attn['decoder_attn_groups'].append([])
+                    self.index_groups.append(0)
+                self.stored_attn['decoder_attn_groups'][self.group_ind].append(context.detach())
         if self.use_intraattn:
-            if not self.multidim:
-                if len(self.stored_attn['decoder_attn']) > 0:
-                    tmp = self.stored_attn['decoder_attn'][self.index]
-                    self.index += 1
-                    if self.index >= len(self.stored_attn['decoder_attn']):
-                        self.index = 0
-                        self.disable_store()
-                    return tmp
-            elif self.tokenflow:
-                if self.multi_len_tokenflow[self.group_ind] > 0:
-                    p = os.path.join(self.tokenflow_store_path, f"decoder_attn_{self.group_ind}_{self.multi_index_tokenflow[self.group_ind]}.pt")
+            if self.tokenflow:
+                if self.len_groups_tokenflow[self.group_ind] > 0:
+                    p = os.path.join(self.tokenflow_store_path, f"decoder_attn_{self.group_ind}_{self.index_groups_tokenflow[self.group_ind]}.pt")
                     tmp = torch.load(p)
-                    self.multi_index_tokenflow[self.group_ind] += 1
-                    if self.multi_index_tokenflow[self.group_ind] >= self.multi_len_tokenflow[self.group_ind]:
-                        self.multi_index_tokenflow[self.group_ind] = 0
+                    self.index_groups_tokenflow[self.group_ind] += 1
+                    if self.index_groups_tokenflow[self.group_ind] >= self.len_groups_tokenflow[self.group_ind]:
+                        self.index_groups_tokenflow[self.group_ind] = 0
                         self.disable_store()
                     return tmp
             else:
-                if len(self.stored_attn['decoder_attn_multi'][self.group_ind]) > 0:
-                    tmp = self.stored_attn['decoder_attn_multi'][self.group_ind][self.multi_index[self.group_ind]]
-                    self.multi_index[self.group_ind] += 1
-                    if self.multi_index[self.group_ind] >= len(self.stored_attn['decoder_attn_multi'][self.group_ind]):
-                        self.multi_index[self.group_ind] = 0
+                if len(self.stored_attn['decoder_attn_groups'][self.group_ind]) > 0:
+                    tmp = self.stored_attn['decoder_attn_groups'][self.group_ind][self.index_groups[self.group_ind]]
+                    self.index_groups[self.group_ind] += 1
+                    if self.index_groups[self.group_ind] >= len(self.stored_attn['decoder_attn_groups'][self.group_ind]):
+                        self.index_groups[self.group_ind] = 0
                         self.disable_store()
                     return tmp
         return context
@@ -238,11 +214,14 @@ class FRESCOAttnProcessor2_0:
     pipe.unet.set_attn_processor(attn_processor_dict)
     """
 
-    def __init__(self, unet_chunk_size=2, controller=None):
+    def __init__(self, unet_chunk_size, edit_mode = 'SDEdit', controller=None):
         if not hasattr(F, "scaled_dot_product_attention"):
             raise ImportError("AttnProcessor2_0 requires PyTorch 2.0, to use it, please upgrade PyTorch to 2.0.")
+        assert(1 <= unet_chunk_size <= 3)
+        assert(edit_mode in ['SDEdit', 'pnp'])
         self.unet_chunk_size = unet_chunk_size
         self.controller = controller
+        self.inject_attn = edit_mode == 'pnp'
             
     def __call__(
         self,
@@ -252,6 +231,8 @@ class FRESCOAttnProcessor2_0:
         attention_mask=None,
         temb=None,
     ):
+        # print("FRESCO processor!")
+        
         residual = hidden_states
         # print('sde attn shape',hidden_states.shape)
 
@@ -293,6 +274,11 @@ class FRESCOAttnProcessor2_0:
         # BC * HW * 8D
         key = attn.to_k(encoder_hidden_states)
         value = attn.to_v(encoder_hidden_states)
+        
+        if self.controller and self.inject_attn and (not crossattn) and \
+            (self.t in self.controller.qk_injection_timesteps or self.t == 1000):
+            query = torch.cat([query.chunk(self.unet_chunk_size)[0]] * self.unet_chunk_size)
+            key = torch.cat([key.chunk(self.unet_chunk_size)[0]] * self.unet_chunk_size)
         
         query_raw, key_raw = None, None
         if self.controller and self.controller.use_interattn and (not crossattn):
@@ -338,7 +324,10 @@ class FRESCOAttnProcessor2_0:
         
         if self.controller and  self.controller.use_intraattn and (not crossattn): 
             # print('sdedit spatial attention')
-            ref_hidden_states = self.controller(None)
+            if self.inject_attn and (self.t in self.controller.qk_injection_timesteps or self.t == 1000):
+                ref_hidden_states = torch.cat([hidden_states.chunk(self.unet_chunk_size)[0]] * self.unet_chunk_size)
+            else:
+                ref_hidden_states = self.controller(None)
             assert ref_hidden_states.shape == encoder_hidden_states.shape
             query_ = attn.to_q(ref_hidden_states)
             key_ = attn.to_k(ref_hidden_states) 
@@ -469,278 +458,13 @@ class FRESCOAttnProcessor2_0:
         hidden_states = hidden_states / attn.rescale_output_factor
 
         return hidden_states
-
-class FRESCOAttnProcessor2_0_pnp:
-    """
-    Hack self attention to FRESCO-based attention
-    * adding spatial-guided attention
-    * adding temporal-guided attention
-    * adding cross-frame attention
     
-    Processor for implementing scaled dot-product attention (enabled by default if you're using PyTorch 2.0).
-    Usage
-    frescoProc = FRESCOAttnProcessor2_0(2, attn_mask)
-    attnProc = AttnProcessor2_0()
-    
-    attn_processor_dict = {}
-    for k in pipe.unet.attn_processors.keys():
-        if k.startswith("up_blocks.2") or k.startswith("up_blocks.3"):
-            attn_processor_dict[k] = frescoProc
-        else:
-            attn_processor_dict[k] = attnProc
-    pipe.unet.set_attn_processor(attn_processor_dict)
-    """
-
-    def __init__(self, unet_chunk_size=3, controller=None):
-        if not hasattr(F, "scaled_dot_product_attention"):
-            raise ImportError("AttnProcessor2_0 requires PyTorch 2.0, to use it, please upgrade PyTorch to 2.0.")
-        self.unet_chunk_size = unet_chunk_size
-        self.controller = controller
-            
-    def __call__(
-        self,
-        attn,
-        hidden_states,
-        encoder_hidden_states=None,
-        attention_mask=None,
-        temb=None,
-    ):
-        residual = hidden_states
-        # print('pnp attn ori hidden_states',hidden_states.shape)
-
-        pnp_ref_hidden_states = hidden_states.chunk(3)[0]
-
-        if attn.spatial_norm is not None:
-            hidden_states = attn.spatial_norm(hidden_states, temb)
-
-        input_ndim = hidden_states.ndim
-
-        if input_ndim == 4:
-            batch_size, channel, height, width = hidden_states.shape
-            hidden_states = hidden_states.view(batch_size, channel, height * width).transpose(1, 2)
-
-        batch_size, sequence_length, _ = (
-            hidden_states.shape if encoder_hidden_states is None else encoder_hidden_states.shape
-        )
-
-        if attention_mask is not None:
-            attention_mask = attn.prepare_attention_mask(attention_mask, sequence_length, batch_size)
-            # scaled_dot_product_attention expects attention_mask shape to be
-            # (batch, heads, source_length, target_length)
-            attention_mask = attention_mask.view(batch_size, attn.heads, -1, attention_mask.shape[-1])
-
-        if attn.group_norm is not None:
-            hidden_states = attn.group_norm(hidden_states.transpose(1, 2)).transpose(1, 2)
-
-        query = attn.to_q(hidden_states)
-
-        crossattn = False
-        if encoder_hidden_states is None:
-            encoder_hidden_states = hidden_states
-            if self.controller and self.controller.store:
-                self.controller(hidden_states.detach().clone())
-        else:
-            crossattn = True
-            if attn.norm_cross:
-                encoder_hidden_states = attn.norm_encoder_hidden_states(encoder_hidden_states)
-            
-        # BC * HW * 8D
-        key = attn.to_k(encoder_hidden_states)
-        value = attn.to_v(encoder_hidden_states)
-
-        if self.controller and (self.t in self.controller.qk_injection_timesteps or self.t == 1000) and (not crossattn):
-            query = torch.cat([query.chunk(self.unet_chunk_size)[0]]*self.unet_chunk_size)
-            key = torch.cat([key.chunk(self.unet_chunk_size)[0]]*self.unet_chunk_size)
-        
-        query_raw, key_raw = None, None
-        if self.controller and self.controller.use_interattn and (not crossattn):
-            query_raw, key_raw = query.clone(), key.clone()
-
-        inner_dim = key.shape[-1] # 8D
-        head_dim = inner_dim // attn.heads # D
-        
-        '''for efficient cross-frame attention'''
-        if self.controller and self.controller.use_cfattn and (not crossattn):
-            # print('pnp-crossframe-attention-processing')
-            video_length = key.size()[0] // self.unet_chunk_size
-            former_frame_index = [0] * video_length
-            attn_mask = None
-            if self.controller.attn_mask is not None:
-                for m in self.controller.attn_mask:
-                    if m.shape[1] == key.shape[1]:
-                        attn_mask = m
-            # BC * HW * 8D --> B * C * HW * 8D
-            key = rearrange(key, "(b f) d c -> b f d c", f=video_length)
-            # B * C * HW * 8D --> B * C * HW * 8D
-            if attn_mask is None:
-                key = key[:, former_frame_index]
-            else:
-                key = repeat(key[:, attn_mask], "b d c -> b f d c", f=video_length)
-            # B * C * HW * 8D --> BC * HW * 8D 
-            key = rearrange(key, "b f d c -> (b f) d c").detach()
-            value = rearrange(value, "(b f) d c -> b f d c", f=video_length)
-            if attn_mask is None:
-                value = value[:, former_frame_index]
-            else:
-                value = repeat(value[:, attn_mask], "b d c -> b f d c", f=video_length)              
-            value = rearrange(value, "b f d c -> (b f) d c").detach()
-        
-        # BC * HW * 8D --> BC * HW * 8 * D --> BC * 8 * HW * D
-        query = query.view(batch_size, -1, attn.heads, head_dim).transpose(1, 2)
-        # BC * 8 * HW2 * D
-        key = key.view(batch_size, -1, attn.heads, head_dim).transpose(1, 2)
-        # BC * 8 * HW2 * D2
-        value = value.view(batch_size, -1, attn.heads, head_dim).transpose(1, 2)
-        
-        '''for spatial-guided intra-frame attention'''
-    
-        if self.controller and  self.controller.use_intraattn and (not crossattn): 
-            # update: use pnp reference feature to inject q and k
-            # ref_hidden_states = self.controller(None)
-            ref_hidden_states = torch.cat([hidden_states.chunk(self.unet_chunk_size)[0]]*self.unet_chunk_size)
-            
-            assert ref_hidden_states.shape == encoder_hidden_states.shape
-            query_ = attn.to_q(ref_hidden_states)
-            key_ = attn.to_k(ref_hidden_states) 
-            
-            ''' 
-            # for xformers implementation 
-            if importlib.util.find_spec("xformers") is not None:
-                # BC * HW * 8D --> BC * HW * 8 * D
-                query_ = rearrange(query_, "b d (h c) -> b d h c", h=attn.heads)
-                key_ = rearrange(key_, "b d (h c) -> b d h c", h=attn.heads)
-                # BC * 8 * HW * D --> 8BC * HW * D
-                query = rearrange(query, "b h d c -> b d h c")
-                query = xformers.ops.memory_efficient_attention(
-                    query_, key_ * self.sattn_scale_factor, query, 
-                    attn_bias=torch.eye(query_.size(1), key_.size(1), 
-                    dtype=query.dtype, device=query.device) * self.bias_weight, op=None
-                )
-                query = rearrange(query, "b d h c -> b h d c").detach()
-            '''
-            # BC * 8 * HW * D
-            query_ = query_.view(batch_size, -1, attn.heads, head_dim).transpose(1, 2)
-            key_ = key_.view(batch_size, -1, attn.heads, head_dim).transpose(1, 2)
-            query = F.scaled_dot_product_attention(
-                query_, key_ * self.controller.intraattn_scale_factor, query, 
-                attn_mask = torch.eye(query_.size(-2), key_.size(-2), 
-                                      dtype=query.dtype, device=query.device) * self.controller.intraattn_bias,
-            ).detach()
-            #print('intra: ', GPU.getGPUs()[1].memoryUsed)
-            del query_, key_
-            torch.cuda.empty_cache()
-        
-        '''
-        # for xformers implementation
-        if importlib.util.find_spec("xformers") is not None:
-            hidden_states = xformers.ops.memory_efficient_attention(
-                    rearrange(query, "b h d c -> b d h c"), rearrange(key, "b h d c -> b d h c"), 
-                    rearrange(value, "b h d c -> b d h c"), 
-                    attn_bias=attention_mask, op=None
-                )
-            hidden_states = rearrange(hidden_states, "b d h c -> b h d c", h=attn.heads)
-        '''
-        # the output of sdp = (batch, num_heads, seq_len, head_dim)
-        # TODO: add support for attn.scale when we move to Torch 2.1
-        # output: BC * 8 * HW * D2      
-        hidden_states = F.scaled_dot_product_attention(
-            query, key, value, attn_mask=attention_mask, dropout_p=0.0, is_causal=False
-        )
-        #print('cross: ', GPU.getGPUs()[1].memoryUsed)
-        
-        '''for temporal-guided inter-frame attention (FLATTEN)'''
-        if self.controller and self.controller.use_interattn and (not crossattn):
-            # print('pnp-temporal-attention-processing')
-            del query, key, value
-            torch.cuda.empty_cache()
-            bwd_mapping = None
-            fwd_mapping = None
-            flattn_mask = None
-            for i, f in enumerate(self.controller.interattn_paras['fwd_mappings']):
-                if f.shape[2] == hidden_states.shape[2]:
-                    fwd_mapping = f
-                    bwd_mapping = self.controller.interattn_paras['bwd_mappings'][i]
-                    interattn_mask = self.controller.interattn_paras['interattn_masks'][i]
-            video_length = key_raw.size()[0] // self.unet_chunk_size
-            # BC * HW * 8D --> C * 8BD * HW
-            key = rearrange(key_raw, "(b f) d c -> f (b c) d", f=video_length)
-            query = rearrange(query_raw, "(b f) d c -> f (b c) d", f=video_length)
-            # BC * 8 * HW * D --> C * 8BD * HW
-            #key = rearrange(hidden_states, "(b f) h d c -> f (b h c) d", f=video_length) ########
-            #query = rearrange(hidden_states, "(b f) h d c -> f (b h c) d", f=video_length) #######
-            
-            value = rearrange(hidden_states, "(b f) h d c -> f (b h c) d", f=video_length)
-            key = torch.gather(key, 2, fwd_mapping.expand(-1,key.shape[1],-1))
-            query = torch.gather(query, 2, fwd_mapping.expand(-1,query.shape[1],-1))
-            value = torch.gather(value, 2, fwd_mapping.expand(-1,value.shape[1],-1))
-            # C * 8BD * HW --> BHW, C, 8D
-            key = rearrange(key, "f (b c) d -> (b d) f c", b=self.unet_chunk_size)
-            query = rearrange(query, "f (b c) d -> (b d) f c", b=self.unet_chunk_size)
-            value = rearrange(value, "f (b c) d -> (b d) f c", b=self.unet_chunk_size) 
-            '''
-            # for xformers implementation 
-            if importlib.util.find_spec("xformers") is not None:
-                # BHW * C * 8D --> BHW * C * 8 * D
-                query = rearrange(query, "b d (h c) -> b d h c", h=attn.heads)
-                key = rearrange(key, "b d (h c) -> b d h c", h=attn.heads)
-                value = rearrange(value, "b d (h c) -> b d h c", h=attn.heads)
-                B, D, C, _ = flattn_mask.shape
-                C1 = int(np.ceil(C / 4) * 4)
-                attn_bias = torch.zeros(B, D, C, C1, dtype=value.dtype, device=value.device) # HW * 1 * C * C
-                attn_bias[:,:,:,:C].masked_fill_(interattn_mask.logical_not(), float("-inf")) # BHW * C * C
-                hidden_states_ = xformers.ops.memory_efficient_attention(
-                    query, key * self.controller.interattn_scale_factor, value, 
-                    attn_bias=attn_bias.squeeze(1).repeat(self.unet_chunk_size*attn.heads,1,1)[:,:,:C], op=None
-                )
-                hidden_states_ = rearrange(hidden_states_, "b d h c -> b h d c", h=attn.heads).detach()
-            '''
-            # BHW * C * 8D --> BHW * C * 8 * D--> BHW * 8 * C * D
-            query = query.view(-1, video_length, attn.heads, head_dim).transpose(1, 2).detach()
-            key = key.view(-1, video_length, attn.heads, head_dim).transpose(1, 2).detach()
-            value = value.view(-1, video_length, attn.heads, head_dim).transpose(1, 2).detach()
-            hidden_states_ = F.scaled_dot_product_attention(
-                query, key * self.controller.interattn_scale_factor, value, 
-                attn_mask = (interattn_mask.repeat(self.unet_chunk_size,1,1,1))#.to(query.dtype)-1.0) * 1e6 -
-                #torch.eye(interattn_mask.shape[2]).to(query.device).to(query.dtype) * 1e4,
-            )
-                
-            # BHW * 8 * C * D --> C * 8BD * HW
-            hidden_states_ = rearrange(hidden_states_, "(b d) h f c -> f (b h c) d", b=self.unet_chunk_size)
-            hidden_states_ = torch.gather(hidden_states_, 2, bwd_mapping.expand(-1,hidden_states_.shape[1],-1)).detach()
-            # C * 8BD * HW --> BC * 8 * HW * D
-            hidden_states = rearrange(hidden_states_, "f (b h c) d -> (b f) h d c", b=self.unet_chunk_size, h=attn.heads)
-            #print('inter: ', GPU.getGPUs()[1].memoryUsed)
-            
-        # BC * 8 * HW * D --> BC * HW * 8D
-        hidden_states = hidden_states.transpose(1, 2).reshape(batch_size, -1, attn.heads * head_dim)
-        hidden_states = hidden_states.to(query.dtype)
-
-        # linear proj
-        hidden_states = attn.to_out[0](hidden_states)
-        # dropout
-        hidden_states = attn.to_out[1](hidden_states)
-
-        if input_ndim == 4:
-            hidden_states = hidden_states.transpose(-1, -2).reshape(batch_size, channel, height, width)
-
-        if attn.residual_connection:
-            hidden_states = hidden_states + residual
-
-        hidden_states = hidden_states / attn.rescale_output_factor
-
-        # hidden_states = torch.cat([pnp_ref_hidden_states,hidden_states])
-        return hidden_states
-    
-def apply_FRESCO_attn(pipe, edit_mode = 'SDEdit'):
+def apply_FRESCO_attn(pipe, use_inversion = False, do_classifier_free_guidance = False, edit_mode = 'SDEdit'):
     """
     Apply FRESCO-guided attention to a StableDiffusionPipeline
     """
-    if edit_mode == 'SDEdit':
-        frescoProc = FRESCOAttnProcessor2_0(2, AttentionControl())
-    elif edit_mode == 'pnp':
-        frescoProc = FRESCOAttnProcessor2_0_pnp(3, AttentionControl())
-    else:
-        raise NotImplementedError
+    unet_chunk_size = 1 + do_classifier_free_guidance + use_inversion
+    frescoProc = FRESCOAttnProcessor2_0(unet_chunk_size, edit_mode, AttentionControl())
     attnProc = AttnProcessor2_0()
     attn_processor_dict = {}
     for k in pipe.unet.attn_processors.keys():
@@ -755,12 +479,67 @@ def apply_FRESCO_attn(pipe, edit_mode = 'SDEdit'):
 """
 ==========================================================================
 PART II - FRESCO-based optimization
+* register_conv_control_efficient(): pnp feature injection
 * optimize_feature(): function to optimze latent feature 
 * my_forward(): hacked pipe.unet.forward(), adding feature optimization
 * apply_FRESCO_opt(): function to apply FRESCO-based optimization to a StableDiffusionPipeline
 * disable_FRESCO_opt(): function to disable the FRESCO-based optimization
 ==========================================================================
 """
+def register_conv_control_efficient(model, injection_schedule, unet_chunk_size = 3):
+    def conv_forward(self):
+        def forward(input_tensor, temb):
+            # print("pnp conv inject!")
+            
+            hidden_states = input_tensor
+
+            hidden_states = self.norm1(hidden_states)
+            hidden_states = self.nonlinearity(hidden_states)
+
+            if self.upsample is not None:
+                # upsample_nearest_nhwc fails with large batch sizes. see https://github.com/huggingface/diffusers/issues/984
+                if hidden_states.shape[0] >= 64:
+                    input_tensor = input_tensor.contiguous()
+                    hidden_states = hidden_states.contiguous()
+                input_tensor = self.upsample(input_tensor)
+                hidden_states = self.upsample(hidden_states)
+            elif self.downsample is not None:
+                input_tensor = self.downsample(input_tensor)
+                hidden_states = self.downsample(hidden_states)
+
+            hidden_states = self.conv1(hidden_states)
+
+            if temb is not None:
+                temb = self.time_emb_proj(self.nonlinearity(temb))[:, :, None, None]
+
+            if temb is not None and self.time_embedding_norm == "default":
+                hidden_states = hidden_states + temb
+
+            hidden_states = self.norm2(hidden_states)
+
+            if temb is not None and self.time_embedding_norm == "scale_shift":
+                scale, shift = torch.chunk(temb, 2, dim=1)
+                hidden_states = hidden_states * (1 + scale) + shift
+
+            hidden_states = self.nonlinearity(hidden_states)
+
+            hidden_states = self.dropout(hidden_states)
+            hidden_states = self.conv2(hidden_states)
+            if self.injection_schedule is not None and (self.t in self.injection_schedule or self.t == 1000):
+                hidden_states = torch.cat([hidden_states.chunk(unet_chunk_size)[0]] * unet_chunk_size)
+
+            if self.conv_shortcut is not None:
+                input_tensor = self.conv_shortcut(input_tensor)
+
+            output_tensor = (input_tensor + hidden_states) / self.output_scale_factor
+
+            return output_tensor
+
+        return forward
+
+    conv_module = model.unet.up_blocks[1].resnets[1]
+    conv_module.forward = conv_forward(conv_module)
+    setattr(conv_module, 'injection_schedule', injection_schedule)
 
 def optimize_feature(sample, flows, occs, correlation_matrix=[], 
                      intra_weight = 1e2, iters=20, unet_chunk_size=2, optimize_temporal = True):
@@ -829,7 +608,6 @@ def optimize_feature(sample, flows, occs, correlation_matrix=[],
             loss.backward()
             n_iter[0]+=1
             
-            
             if False: # for debug
                 print('Iteration: %d, loss: %f'%(n_iter[0]+1, loss.data.mean()))
             return loss
@@ -838,67 +616,7 @@ def optimize_feature(sample, flows, occs, correlation_matrix=[],
     torch.cuda.empty_cache()
     return adaptive_instance_normalization(rearrange(cs.data.to(sample.dtype), "b f c h w -> (b f) c h w"), sample)
 
-# add: pnp feature injection
-# take from: https://github.com/MichalGeyer/pnp-diffusers   
-def register_conv_control_efficient(model, injection_schedule):
-    def conv_forward(self):
-        def forward(input_tensor, temb):
-            hidden_states = input_tensor
-
-            hidden_states = self.norm1(hidden_states)
-            hidden_states = self.nonlinearity(hidden_states)
-
-            if self.upsample is not None:
-                # upsample_nearest_nhwc fails with large batch sizes. see https://github.com/huggingface/diffusers/issues/984
-                if hidden_states.shape[0] >= 64:
-                    input_tensor = input_tensor.contiguous()
-                    hidden_states = hidden_states.contiguous()
-                input_tensor = self.upsample(input_tensor)
-                hidden_states = self.upsample(hidden_states)
-            elif self.downsample is not None:
-                input_tensor = self.downsample(input_tensor)
-                hidden_states = self.downsample(hidden_states)
-
-            hidden_states = self.conv1(hidden_states)
-
-            if temb is not None:
-                temb = self.time_emb_proj(self.nonlinearity(temb))[:, :, None, None]
-
-            if temb is not None and self.time_embedding_norm == "default":
-                hidden_states = hidden_states + temb
-
-            hidden_states = self.norm2(hidden_states)
-
-            if temb is not None and self.time_embedding_norm == "scale_shift":
-                scale, shift = torch.chunk(temb, 2, dim=1)
-                hidden_states = hidden_states * (1 + scale) + shift
-
-            hidden_states = self.nonlinearity(hidden_states)
-
-            hidden_states = self.dropout(hidden_states)
-            hidden_states = self.conv2(hidden_states)
-            if self.injection_schedule is not None and (self.t in self.injection_schedule or self.t == 1000):
-                source_batch_size = int(hidden_states.shape[0] // 3)
-                # inject unconditional
-                hidden_states[source_batch_size:2 * source_batch_size] = hidden_states[:source_batch_size]
-                # inject conditional
-                hidden_states[2 * source_batch_size:] = hidden_states[:source_batch_size]
-
-            if self.conv_shortcut is not None:
-                input_tensor = self.conv_shortcut(input_tensor)
-
-            output_tensor = (input_tensor + hidden_states) / self.output_scale_factor
-
-            return output_tensor
-
-        return forward
-
-    conv_module = model.unet.up_blocks[1].resnets[1]
-    conv_module.forward = conv_forward(conv_module)
-    setattr(conv_module, 'injection_schedule', injection_schedule)
-
-
-def my_forward(self, steps = [], layers = [0,1,2,3], flows = None, occs = None, 
+def my_forward(self, use_inversion = False, steps = [], layers = [0,1,2,3], flows = None, occs = None, 
                correlation_matrix=[], intra_weight = 1e2, iters=20, optimize_temporal = True, saliency = None):
     """
     Hacked pipe.unet.forward()
@@ -949,6 +667,9 @@ def my_forward(self, steps = [], layers = [0,1,2,3], flows = None, occs = None,
                 If `return_dict` is True, an [`~models.unet_2d_condition.UNet2DConditionOutput`] is returned, otherwise
                 a `tuple` is returned where the first element is the sample tensor.
         """
+        
+        # print("FRESCO opt!")
+        
         # By default samples have to be AT least a multiple of the overall upsampling factor.
         # The overall upsampling factor is equal to 2 ** (# num of upsampling layers).
         # However, the upsampling interpolation output size can be forced to fit any upsampling size
@@ -1182,6 +903,9 @@ def my_forward(self, steps = [], layers = [0,1,2,3], flows = None, occs = None,
             [HACK] optimize the decoder features
             [HACK] perform background smoothing
             '''
+            if use_inversion:
+                inv_sample = sample.chunk(3)[0]
+                sample = torch.cat(list(sample.chunk(3)[1:]))
             if i in layers:
                 up_samples += (sample, )
             if timestep in steps and i in layers: 
@@ -1189,6 +913,8 @@ def my_forward(self, steps = [], layers = [0,1,2,3], flows = None, occs = None,
                                           intra_weight, iters, optimize_temporal = optimize_temporal)
                 if saliency is not None:
                     sample = warp_tensor(sample, flows, occs, saliency, 2)
+            if use_inversion:
+                sample = torch.cat([inv_sample, sample])
             
             # if we have not reached the final block and need to forward the
             # upsample size, we do it here
@@ -1225,366 +951,21 @@ def my_forward(self, steps = [], layers = [0,1,2,3], flows = None, occs = None,
 
         return UNet2DConditionOutput(sample=sample)
     
-    return forward    
-
-
-def my_forward_pnp(self, steps = [], layers = [0,1,2,3], flows = None, occs = None, 
-                intra_weight = 1e2, iters=20, optimize_temporal = True, saliency = None):
-    """
-    Hacked pipe.unet.forward()
-    copied from https://github.com/huggingface/diffusers/blob/v0.19.3/src/diffusers/models/unet_2d_condition.py#L700
-    if you are using a new version of diffusers, please copy the source code and modify it accordingly (find [HACK] in the code)
-    * restore and return the decoder features
-    * optimize the decoder features
-    * perform background smoothing
-    """    
-    def forward(
-        sample: torch.FloatTensor,
-        timestep: Union[torch.Tensor, float, int],
-        encoder_hidden_states: torch.Tensor,
-        class_labels: Optional[torch.Tensor] = None,
-        timestep_cond: Optional[torch.Tensor] = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        cross_attention_kwargs: Optional[Dict[str, Any]] = None,
-        added_cond_kwargs: Optional[Dict[str, torch.Tensor]] = None,
-        down_block_additional_residuals: Optional[Tuple[torch.Tensor]] = None,
-        mid_block_additional_residual: Optional[torch.Tensor] = None,
-        encoder_attention_mask: Optional[torch.Tensor] = None,
-        return_dict: bool = True,
-    ) -> Union[UNet2DConditionOutput, Tuple]:
-        r"""
-        The [`UNet2DConditionModel`] forward method.
-
-        Args:
-            sample (`torch.FloatTensor`):
-                The noisy input tensor with the following shape `(batch, channel, height, width)`.
-            timestep (`torch.FloatTensor` or `float` or `int`): The number of timesteps to denoise an input.
-            encoder_hidden_states (`torch.FloatTensor`):
-                The encoder hidden states with shape `(batch, sequence_length, feature_dim)`.
-            encoder_attention_mask (`torch.Tensor`):
-                A cross-attention mask of shape `(batch, sequence_length)` is applied to `encoder_hidden_states`. If
-                `True` the mask is kept, otherwise if `False` it is discarded. Mask will be converted into a bias,
-                which adds large negative values to the attention scores corresponding to "discard" tokens.
-            return_dict (`bool`, *optional*, defaults to `True`):
-                Whether or not to return a [`~models.unet_2d_condition.UNet2DConditionOutput`] instead of a plain
-                tuple.
-            cross_attention_kwargs (`dict`, *optional*):
-                A kwargs dictionary that if specified is passed along to the [`AttnProcessor`].
-            added_cond_kwargs: (`dict`, *optional*):
-                A kwargs dictionary containin additional embeddings that if specified are added to the embeddings that
-                are passed along to the UNet blocks.
-
-        Returns:
-            [`~models.unet_2d_condition.UNet2DConditionOutput`] or `tuple`:
-                If `return_dict` is True, an [`~models.unet_2d_condition.UNet2DConditionOutput`] is returned, otherwise
-                a `tuple` is returned where the first element is the sample tensor.
-        """
-        # By default samples have to be AT least a multiple of the overall upsampling factor.
-        # The overall upsampling factor is equal to 2 ** (# num of upsampling layers).
-        # However, the upsampling interpolation output size can be forced to fit any upsampling size
-        # on the fly if necessary.
-        default_overall_up_factor = 2**self.num_upsamplers
-
-        # upsample size should be forwarded when sample is not a multiple of `default_overall_up_factor`
-        forward_upsample_size = False
-        upsample_size = None
-
-        if any(s % default_overall_up_factor != 0 for s in sample.shape[-2:]):
-            logger.info("Forward upsample size to force interpolation output size.")
-            forward_upsample_size = True
-
-        # ensure attention_mask is a bias, and give it a singleton query_tokens dimension
-        # expects mask of shape:
-        #   [batch, key_tokens]
-        # adds singleton query_tokens dimension:
-        #   [batch,                    1, key_tokens]
-        # this helps to broadcast it as a bias over attention scores, which will be in one of the following shapes:
-        #   [batch,  heads, query_tokens, key_tokens] (e.g. torch sdp attn)
-        #   [batch * heads, query_tokens, key_tokens] (e.g. xformers or classic attn)
-        if attention_mask is not None:
-            # assume that mask is expressed as:
-            #   (1 = keep,      0 = discard)
-            # convert mask into a bias that can be added to attention scores:
-            #       (keep = +0,     discard = -10000.0)
-            attention_mask = (1 - attention_mask.to(sample.dtype)) * -10000.0
-            attention_mask = attention_mask.unsqueeze(1)
-
-        # convert encoder_attention_mask to a bias the same way we do for attention_mask
-        if encoder_attention_mask is not None:
-            encoder_attention_mask = (1 - encoder_attention_mask.to(sample.dtype)) * -10000.0
-            encoder_attention_mask = encoder_attention_mask.unsqueeze(1)
-
-        # 0. center input if necessary
-        if self.config.center_input_sample:
-            sample = 2 * sample - 1.0
-
-        # 1. time
-        timesteps = timestep
-        if not torch.is_tensor(timesteps):
-            # TODO: this requires sync between CPU and GPU. So try to pass timesteps as tensors if you can
-            # This would be a good case for the `match` statement (Python 3.10+)
-            is_mps = sample.device.type == "mps"
-            if isinstance(timestep, float):
-                dtype = torch.float32 if is_mps else torch.float64
-            else:
-                dtype = torch.int32 if is_mps else torch.int64
-            timesteps = torch.tensor([timesteps], dtype=dtype, device=sample.device)
-        elif len(timesteps.shape) == 0:
-            timesteps = timesteps[None].to(sample.device)
-
-        # broadcast to batch dimension in a way that's compatible with ONNX/Core ML
-        timesteps = timesteps.expand(sample.shape[0])
-
-        t_emb = self.time_proj(timesteps)
-
-        # `Timesteps` does not contain any weights and will always return f32 tensors
-        # but time_embedding might actually be running in fp16. so we need to cast here.
-        # there might be better ways to encapsulate this.
-        t_emb = t_emb.to(dtype=sample.dtype)
-
-        emb = self.time_embedding(t_emb, timestep_cond)
-        aug_emb = None
-
-        if self.class_embedding is not None:
-            if class_labels is None:
-                raise ValueError("class_labels should be provided when num_class_embeds > 0")
-
-            if self.config.class_embed_type == "timestep":
-                class_labels = self.time_proj(class_labels)
-
-                # `Timesteps` does not contain any weights and will always return f32 tensors
-                # there might be better ways to encapsulate this.
-                class_labels = class_labels.to(dtype=sample.dtype)
-
-            class_emb = self.class_embedding(class_labels).to(dtype=sample.dtype)
-
-            if self.config.class_embeddings_concat:
-                emb = torch.cat([emb, class_emb], dim=-1)
-            else:
-                emb = emb + class_emb
-
-        if self.config.addition_embed_type == "text":
-            aug_emb = self.add_embedding(encoder_hidden_states)
-        elif self.config.addition_embed_type == "text_image":
-            # Kandinsky 2.1 - style
-            if "image_embeds" not in added_cond_kwargs:
-                raise ValueError(
-                    f"{self.__class__} has the config param `addition_embed_type` set to 'text_image' which requires the keyword argument `image_embeds` to be passed in `added_cond_kwargs`"
-                )
-
-            image_embs = added_cond_kwargs.get("image_embeds")
-            text_embs = added_cond_kwargs.get("text_embeds", encoder_hidden_states)
-            aug_emb = self.add_embedding(text_embs, image_embs)
-        elif self.config.addition_embed_type == "text_time":
-            # SDXL - style
-            if "text_embeds" not in added_cond_kwargs:
-                raise ValueError(
-                    f"{self.__class__} has the config param `addition_embed_type` set to 'text_time' which requires the keyword argument `text_embeds` to be passed in `added_cond_kwargs`"
-                )
-            text_embeds = added_cond_kwargs.get("text_embeds")
-            if "time_ids" not in added_cond_kwargs:
-                raise ValueError(
-                    f"{self.__class__} has the config param `addition_embed_type` set to 'text_time' which requires the keyword argument `time_ids` to be passed in `added_cond_kwargs`"
-                )
-            time_ids = added_cond_kwargs.get("time_ids")
-            time_embeds = self.add_time_proj(time_ids.flatten())
-            time_embeds = time_embeds.reshape((text_embeds.shape[0], -1))
-
-            add_embeds = torch.concat([text_embeds, time_embeds], dim=-1)
-            add_embeds = add_embeds.to(emb.dtype)
-            aug_emb = self.add_embedding(add_embeds)
-        elif self.config.addition_embed_type == "image":
-            # Kandinsky 2.2 - style
-            if "image_embeds" not in added_cond_kwargs:
-                raise ValueError(
-                    f"{self.__class__} has the config param `addition_embed_type` set to 'image' which requires the keyword argument `image_embeds` to be passed in `added_cond_kwargs`"
-                )
-            image_embs = added_cond_kwargs.get("image_embeds")
-            aug_emb = self.add_embedding(image_embs)
-        elif self.config.addition_embed_type == "image_hint":
-            # Kandinsky 2.2 - style
-            if "image_embeds" not in added_cond_kwargs or "hint" not in added_cond_kwargs:
-                raise ValueError(
-                    f"{self.__class__} has the config param `addition_embed_type` set to 'image_hint' which requires the keyword arguments `image_embeds` and `hint` to be passed in `added_cond_kwargs`"
-                )
-            image_embs = added_cond_kwargs.get("image_embeds")
-            hint = added_cond_kwargs.get("hint")
-            aug_emb, hint = self.add_embedding(image_embs, hint)
-            sample = torch.cat([sample, hint], dim=1)
-
-        emb = emb + aug_emb if aug_emb is not None else emb
-
-        if self.time_embed_act is not None:
-            emb = self.time_embed_act(emb)
-
-        if self.encoder_hid_proj is not None and self.config.encoder_hid_dim_type == "text_proj":
-            encoder_hidden_states = self.encoder_hid_proj(encoder_hidden_states)
-        elif self.encoder_hid_proj is not None and self.config.encoder_hid_dim_type == "text_image_proj":
-            # Kadinsky 2.1 - style
-            if "image_embeds" not in added_cond_kwargs:
-                raise ValueError(
-                    f"{self.__class__} has the config param `encoder_hid_dim_type` set to 'text_image_proj' which requires the keyword argument `image_embeds` to be passed in  `added_conditions`"
-                )
-
-            image_embeds = added_cond_kwargs.get("image_embeds")
-            encoder_hidden_states = self.encoder_hid_proj(encoder_hidden_states, image_embeds)
-        elif self.encoder_hid_proj is not None and self.config.encoder_hid_dim_type == "image_proj":
-            # Kandinsky 2.2 - style
-            if "image_embeds" not in added_cond_kwargs:
-                raise ValueError(
-                    f"{self.__class__} has the config param `encoder_hid_dim_type` set to 'image_proj' which requires the keyword argument `image_embeds` to be passed in  `added_conditions`"
-                )
-            image_embeds = added_cond_kwargs.get("image_embeds")
-            encoder_hidden_states = self.encoder_hid_proj(image_embeds)
-        # 2. pre-process
-        sample = self.conv_in(sample)
-
-        # 3. down
-
-        is_controlnet = mid_block_additional_residual is not None and down_block_additional_residuals is not None
-        is_adapter = mid_block_additional_residual is None and down_block_additional_residuals is not None
-
-        down_block_res_samples = (sample,)
-        for downsample_block in self.down_blocks:
-            if hasattr(downsample_block, "has_cross_attention") and downsample_block.has_cross_attention:
-                # For t2i-adapter CrossAttnDownBlock2D
-                additional_residuals = {}
-                if is_adapter and len(down_block_additional_residuals) > 0:
-                    additional_residuals["additional_residuals"] = down_block_additional_residuals.pop(0)
-
-                sample, res_samples = downsample_block(
-                    hidden_states=sample,
-                    temb=emb,
-                    encoder_hidden_states=encoder_hidden_states,
-                    attention_mask=attention_mask,
-                    cross_attention_kwargs=cross_attention_kwargs,
-                    encoder_attention_mask=encoder_attention_mask,
-                    **additional_residuals,
-                )
-            else:
-                sample, res_samples = downsample_block(hidden_states=sample, temb=emb)
-
-                if is_adapter and len(down_block_additional_residuals) > 0:
-                    sample += down_block_additional_residuals.pop(0)
-            down_block_res_samples += res_samples
-
-        if is_controlnet:
-            new_down_block_res_samples = ()
-
-            for down_block_res_sample, down_block_additional_residual in zip(
-                down_block_res_samples, down_block_additional_residuals
-            ):
-                down_block_res_sample = down_block_res_sample + down_block_additional_residual
-                new_down_block_res_samples = new_down_block_res_samples + (down_block_res_sample,)
-
-            down_block_res_samples = new_down_block_res_samples
-
-        # 4. mid
-        if self.mid_block is not None:
-            sample = self.mid_block(
-                sample,
-                emb,
-                encoder_hidden_states=encoder_hidden_states,
-                attention_mask=attention_mask,
-                cross_attention_kwargs=cross_attention_kwargs,
-                encoder_attention_mask=encoder_attention_mask,
-            )
-
-        if is_controlnet:
-            sample = sample + mid_block_additional_residual
-        
-        # 5. up
-        '''
-        [HACK] restore the decoder features in up_samples
-        '''
-
-        up_samples = ()
-        #down_samples = ()
-        for i, upsample_block in enumerate(self.up_blocks):
-            is_final_block = i == len(self.up_blocks) - 1
-
-            res_samples = down_block_res_samples[-len(upsample_block.resnets) :]
-            down_block_res_samples = down_block_res_samples[: -len(upsample_block.resnets)]
-
-            '''
-            [HACK] restore the decoder features in up_samples
-            [HACK] optimize the decoder features
-            [HACK] perform background smoothing
-            '''
-
-            # ADD by BYH
-            # only optimize latter 2 group of feature in pnp editing.
-            sample_opt = torch.cat(sample.chunk(3)[1:])
-
-            # calculate gram matrix with injected original feature by pnp.
-            latent_vector = rearrange(torch.cat([sample.chunk(3)[0],sample.chunk(3)[0]]), "b c h w -> b (h w) c")
-            latent_vector = latent_vector / ((latent_vector ** 2).sum(dim=2, keepdims=True) ** 0.5)
-            attention_probs = torch.bmm(latent_vector, latent_vector.transpose(-1, -2))
-            correlation_matrix = [attention_probs.detach().clone().to(torch.float32)]
-            del attention_probs, latent_vector
-
-            if i in layers:
-                up_samples += (sample, )
-            if timestep in steps and i in layers: 
-                sample_opt = optimize_feature(sample_opt, flows, occs, correlation_matrix, 
-                                          intra_weight, iters, optimize_temporal = optimize_temporal)
-                if saliency is not None:
-                    sample_opt = warp_tensor(sample_opt, flows, occs, saliency, 2)
-            sample = torch.cat([sample.chunk(3)[0],sample_opt])
-            
-            # if we have not reached the final block and need to forward the
-            # upsample size, we do it here
-            if not is_final_block and forward_upsample_size:
-                upsample_size = down_block_res_samples[-1].shape[2:]
-
-            if hasattr(upsample_block, "has_cross_attention") and upsample_block.has_cross_attention:
-                sample = upsample_block(
-                    hidden_states=sample,
-                    temb=emb,
-                    res_hidden_states_tuple=res_samples,
-                    encoder_hidden_states=encoder_hidden_states,
-                    cross_attention_kwargs=cross_attention_kwargs,
-                    upsample_size=upsample_size,
-                    attention_mask=attention_mask,
-                    encoder_attention_mask=encoder_attention_mask,
-                )
-            else:
-                sample = upsample_block(
-                    hidden_states=sample, temb=emb, res_hidden_states_tuple=res_samples, upsample_size=upsample_size
-                )
-
-        # 6. post-process
-        if self.conv_norm_out:
-            sample = self.conv_norm_out(sample)
-            sample = self.conv_act(sample)
-        sample = self.conv_out(sample)
-
-        '''
-        [HACK] return the output feature as well as the decoder features
-        '''        
-        if not return_dict:
-            return (sample, ) + up_samples
-
-        return UNet2DConditionOutput(sample=sample)
-    
-    return forward    
+    return forward
 
 def apply_FRESCO_opt(pipe, steps = [], layers = [0,1,2,3], flows = None, occs = None, 
-               correlation_matrix=[], intra_weight = 1e2, iters=20, optimize_temporal = True, saliency = None, edit_mode = 'SDEdit'):
+               correlation_matrix = [], intra_weight = 1e2, iters=20, optimize_temporal = True, saliency = None, use_inversion = False):
     """
     Apply FRESCO-based optimization to a StableDiffusionPipeline
     """  
-    if edit_mode == 'SDEdit':
-        pipe.unet.forward = my_forward(pipe.unet, steps, layers, flows, occs, 
-               correlation_matrix, intra_weight, iters, optimize_temporal, saliency)
-    elif edit_mode == 'pnp':
-        pipe.unet.forward = my_forward_pnp(pipe.unet, steps, layers, flows, occs, 
-             intra_weight, iters, optimize_temporal, saliency)
-def disable_FRESCO_opt(pipe, edit_mode = 'SDEdit'):
+    pipe.unet.forward = my_forward(pipe.unet, use_inversion, steps, layers, flows, occs, 
+                                   correlation_matrix, intra_weight, iters, optimize_temporal, saliency)
+    
+def disable_FRESCO_opt(pipe, use_inversion = False):
     """
     Disable the FRESCO-based optimization
     """  
-    apply_FRESCO_opt(pipe, edit_mode=edit_mode)
+    apply_FRESCO_opt(pipe, use_inversion=use_inversion)
 
 
 """
@@ -1597,7 +978,7 @@ PART III - Prepare parameters for FRESCO-guided attention/optimization
 
 @torch.no_grad()
 def get_intraframe_paras(pipe, imgs, frescoProc, prompt_embeds, do_classifier_free_guidance=True, 
-                         seed=0, clear = True, multidim = False, group_ind = 0):
+                         seed=0, clear = True, group_ind = 0):
     """
     Get parameters for spatial-guided attention and optimization
     * perform one step denoising 
@@ -1615,7 +996,7 @@ def get_intraframe_paras(pipe, imgs, frescoProc, prompt_embeds, do_classifier_fr
     disable_FRESCO_opt(pipe)
     if clear:
         frescoProc.controller.clear_store()
-    frescoProc.controller.enable_store(multidim, group_ind)
+    frescoProc.controller.enable_store(group_ind)
     
     latents = pipe.prepare_latents(
         B,
@@ -1713,93 +1094,3 @@ def get_flow_and_interframe_paras(flow_model, imgs, visualize_pipeline=False):
     torch.cuda.empty_cache()
     
     return [fwd_flows, bwd_flows], [fwd_occs, bwd_occs], attn_mask, interattn_paras
-
-# ADD by GWS
-# How I warp your noise
-@torch.no_grad()
-def get_flow_and_interframe_paras_warped(flow_model, imgs, visualize_pipeline=False):
-    """
-    Get parameters for temporal-guided attention and optimization
-    * predict optical flow and occlusion mask
-    * compute pixel index correspondence for FLATTEN
-    """
-    images = torch.stack([torch.from_numpy(img).permute(2, 0, 1).float() for img in imgs], dim=0).cuda()
-    imgs_torch = torch.cat([numpy2tensor(img) for img in imgs], dim=0)
-    
-    reshuffle_list = list(range(1,len(images)))+[0]
-    
-    # add
-    centre = int(len(images) / 2)
-    reshuffle_list_centralized = [centre] * len(images)
-
-    
-    results_dict = flow_model(images, images[reshuffle_list], attn_splits_list=[2], 
-                              corr_radius_list=[-1], prop_radius_list=[-1], pred_bidir_flow=True)
-    # add
-    results_dict_centralized = flow_model(images, images[reshuffle_list_centralized],attn_splits_list=[2],
-                            corr_radius_list=[-1], prop_radius_list=[-1], pred_bidir_flow=True)
-
-    flow_pr = results_dict['flow_preds'][-1]  # [2*B, 2, H, W]
-    fwd_flows, bwd_flows = flow_pr.chunk(2)   # [B, 2, H, W]
-    fwd_occs, bwd_occs = forward_backward_consistency_check(fwd_flows, bwd_flows) # [B, H, W]
-
-    # add
-    flow_pr_centralized = results_dict_centralized['flow_preds'][-1]  # [2*B, 2, H, W]
-    fwd_flows_centralized, bwd_flows_centralized = flow_pr_centralized.chunk(2)   # [B, 2, H, W]
-
-    
-    warped_image1 = flow_warp(images, bwd_flows)
-    bwd_occs = torch.clamp(bwd_occs + (abs(images[reshuffle_list]-warped_image1).mean(dim=1)>255*0.25).float(), 0 ,1)
-    
-    warped_image2 = flow_warp(images[reshuffle_list], fwd_flows)
-    fwd_occs = torch.clamp(fwd_occs + (abs(images-warped_image2).mean(dim=1)>255*0.25).float(), 0 ,1)    
-    
-    if visualize_pipeline:
-        print('visualized occlusion masks based on optical flows')
-        viz = torchvision.utils.make_grid(imgs_torch * (1-fwd_occs.unsqueeze(1)), len(images), 1)
-        visualize(viz.cpu(), 90)
-        viz = torchvision.utils.make_grid(imgs_torch[reshuffle_list] * (1-bwd_occs.unsqueeze(1)), len(images), 1)
-        visualize(viz.cpu(), 90) 
-        
-    attn_mask = []
-    for scale in [8.0, 16.0, 32.0]:
-        bwd_occs_ = F.interpolate(bwd_occs[:-1].unsqueeze(1), scale_factor=1./scale, mode='bilinear')
-        attn_mask += [torch.cat((bwd_occs_[0:1].reshape(1,-1)>-1, bwd_occs_.reshape(bwd_occs_.shape[0],-1)>0.5), dim=0)]   
-        
-    fwd_mappings = []
-    bwd_mappings = []
-    interattn_masks = []
-    for scale in [8.0, 16.0]:
-        fwd_mapping, bwd_mapping, interattn_mask = get_mapping_ind(bwd_flows, bwd_occs, imgs_torch, scale=scale)
-        fwd_mappings += [fwd_mapping]
-        bwd_mappings += [bwd_mapping]
-        interattn_masks += [interattn_mask]  
-    
-    interattn_paras = {}
-    interattn_paras['fwd_mappings'] = fwd_mappings
-    interattn_paras['bwd_mappings'] = bwd_mappings
-    interattn_paras['interattn_masks'] = interattn_masks    
-
-    gc.collect()
-    torch.cuda.empty_cache()
-    
-    return [fwd_flows, bwd_flows], [fwd_occs, bwd_occs], attn_mask, interattn_paras, [fwd_flows_centralized, bwd_flows_centralized]
-
-# calculate all interframe paras and saliency for tokenflow and noise warp
-def get_all_flow_and_interframe_paras_warped(flow_model, imgs_all, use_salinecy = False, sod_model = None, dilate=None, batch_size = 8, visualize_pipeline=False):
-    for i in range(0,len(imgs_all),batch_size):
-        end = i + batch_size if i + batch_size < len(imgs_all) else len(imgs_all)
-
-        fwd_flows_all = []
-        bwd_flows_all = []
-        fwd_occs_all = []
-        bwd_occs_all = []
-        fwd_flows_centralized_all = []
-        bwd_flows_centralized_all = []
-        attn_mask = []
-        interattn_paras = []
-        saliency_all = []
-
-        flows_batch, occs_batch, attn_mask_batch, interattn_paras_batch, flows_centralized_batch = get_flow_and_interframe_paras_warped(flow_model, imgs_all[ i:end ])
-        saliency_batch = get_saliency(imgs_all[i:end], sod_model, dilate)
-

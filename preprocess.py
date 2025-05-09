@@ -167,6 +167,8 @@ class Preprocess(nn.Module):
         inv_prompt = config['inv_prompt']
         extra_prompts = [''] * frame_num
 
+        print(inv_prompt)
+
         prompt_embeds = self.pipe._encode_prompt(
             inv_prompt,
             device,
@@ -195,7 +197,6 @@ class Preprocess(nn.Module):
         edges = edges.repeat(1,3,1,1).cuda() * 0.5 + 0.5
         
         edges = edges.to(self.pipe.unet.dtype)
-        
 
         self.ddim_inversion(cond=prompt_embeds,
                             latent_frames=latents,

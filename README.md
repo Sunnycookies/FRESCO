@@ -1,235 +1,52 @@
-# FRESCO - Official PyTorch Implementation
+## FRESCO相关文档（T10）
 
+### 关于 `FRESCO` 、 `fresco` 和 `fresco_new` 三个文件夹的区别
 
-**FRESCO: Spatial-Temporal Correspondence for Zero-Shot Video Translation**<br>
-[Shuai Yang](https://williamyang1991.github.io/), [Yifan Zhou](https://zhouyifan.net/), [Ziwei Liu](https://liuziwei7.github.io/) and [Chen Change Loy](https://www.mmlab-ntu.com/person/ccloy/)<br>
-in CVPR 2024 <br>
-[**Project Page**](https://www.mmlab-ntu.com/project/fresco/) | [**Paper**](https://arxiv.org/abs/2403.12962) | [**Supplementary Video**](https://youtu.be/jLnGx5H-wLw) | [**Input Data and Video Results**](https://drive.google.com/file/d/12BFx3hp8_jp9m0EmKpw-cus2SABPQx2Q/view?usp=sharing) <br>
+- `FRESCO`：不是扩展实验的文件夹（应该是直接从Github上下载的）
+- `fresco`：扩展实验前中期的文件夹，文件较多，重名文件较多
+- `fresco_new`：扩展实验后期的文件夹，将 `fresco` 无用文件删除，将代码进行了整理
 
-<a href="https://huggingface.co/spaces/PKUWilliamYang/FRESCO"><img src="https://huggingface.co/datasets/huggingface/badges/raw/main/open-in-hf-spaces-sm-dark.svg" alt="Web Demo"></a> 
+### 关于过去版本的备份
 
-**Abstract:** *The remarkable efficacy of text-to-image diffusion models has motivated extensive exploration of their potential application in video domains.
-Zero-shot methods seek to extend image diffusion models to videos without necessitating model training.
-Recent methods mainly focus on incorporating inter-frame correspondence into attention mechanisms. However, the soft constraint imposed on determining where to attend to valid features can sometimes be insufficient, resulting in temporal inconsistency.
-In this paper, we introduce FRESCO, intra-frame correspondence alongside inter-frame correspondence to establish a more robust spatial-temporal constraint. This enhancement ensures a more consistent transformation of semantically similar content across frames. Beyond mere attention guidance, our approach involves an explicit update of features to achieve high spatial-temporal consistency with the input video, significantly improving the visual coherence of the resulting translated videos.
-Extensive experiments demonstrate the effectiveness of our proposed framework in producing high-quality, coherent videos, marking a notable improvement over existing zero-shot methods.*
+- 以 git 仓库的形式将一些关键实验节点备份在了网盘 `linjunxin/fresco/backup.git` 中。实际上 `fresco_new` 与仓库同步，可以通过 git 进行回溯查看
 
-**Features**:<br>
-- **Temporal consistency**: use intra-and inter-frame constraint with better consistency and coverage than optical flow alone.
-    - Compared with our previous work [Rerender-A-Video](https://github.com/williamyang1991/Rerender_A_Video), FRESCO is more robust to large and quick motion.
-- **Zero-shot**: no training or fine-tuning required.
-- **Flexibility**: compatible with off-the-shelf models (e.g., [ControlNet](https://github.com/lllyasviel/ControlNet), [LoRA](https://civitai.com/)) for customized translation.
+### 关于不同实验条件的设置与关闭
 
-https://github.com/williamyang1991/FRESCO/assets/18130694/aad358af-4d27-4f18-b069-89a1abd94d38
+- 实际上，所有实验设置均在 ***config*** 提供，并经由 check_config() 加工、检查，最后传入视频处理函数
+- 关于 ***config*** 的完整内容，详见 ***`config/ref_config.yaml`***
+- 如果需要修改实验条件，可以直接通过修改 ***config*** 的方式进行；<u>因为 synth_mode 与 edit_mode 会涉及是否使用 ddim inversion，从而影响模型结构的问题，因此需要在加载模型前设置好；其余 ***config*** 可以在模型加载完后修改</u>
+- 不考虑运行结果的存储，以下列出一些条件的 ***<u>最晚修改位置</u>***，若在该位置之后修改，则可能会造成运行过程中前后设置不一致
 
+| 设置项          | 开关出现形式                         | 最晚修改位置                                          | 备注                                                         |
+| --------------- | ------------------------------------ | ----------------------------------------------------- | ------------------------------------------------------------ |
+| ebsynth         | ***run_ebsynth***                    | 加载模型前                                            |                                                              |
+| tokenflow       | ***run_tokenflow***                  | 加载模型前                                            | 此外需要修改 ***config['use_inversion']=True***              |
+| Mixed           | ***config['primary_select']***       | 加载模型前                                            | 该开关直接作用是开启锚点帧的选取。完整开启 Mixed 还需要同时设置 ebsynth 和 tokenflow（因此也需要设置 ***config['use_inversion']=True***） |
+| SDEdit          | ***config['edit_mode']***            | 加载模型前                                            |                                                              |
+| pnp             | ***config['edit_mode']***            | 加载模型前                                            | 此外需要修改 ***config['use_inversion']=True***              |
+| fresco          | ***config['use_fresco']***           | ***`pipe_FRESCO.py`*** 中line 406，为fresco准备参数前 |                                                              |
+| inference steps | ***config['num_inference_steps']***  | 加载模型前                                            |                                                              |
+| keyframe mode   | ***config['keyframe_select_mode']*** | ***`run_fresco.py`*** 中line 157，即准备关键帧索引前  | 注意 check_config() 中的条件，即仅使用 ebsynth 时 keyframe 应当为 fixed |
 
-## Updates
-- [04/2024] Integrated to 🤗 [Hugging Face](https://huggingface.co/spaces/PKUWilliamYang/FRESCO). Enjoy the web demo!
-- [03/2024] Paper is released.
-- [03/2024] Code is released.
-- [03/2024] This website is created.
+### 关于FRESCO子模块的开关
 
-### TODO
-- [ ] Integrate into Diffusers
-- [x] ~~Add Huggingface web demo~~
-- [x] ~~Add webUI.~~
-- [x] ~~Update readme~~
-- [x] ~~Upload paper to arXiv, release related material~~
+- 原 FRESCO 的子模块开关在 inference step loop 之外；为了适配 tokenflow，现在FRESCO 的子模块开关在 inference step loop 内，总计有两处（关键帧编辑时、tokenflow 合成时）
+- 为方便书写，以下 ***frescoProc.controller*** 简写为 ***ctrlr***
+- 为方便书写，以下函数均不写出参数，实际使用时需注意参数设置
+- 同时运行多个 ***`run_fresco.py`*** 时，请注意 ***config['temp_paras_save_path']*** 的设置，防止出现同一个目录的多次使用
 
-## Installation
+| 子模块                    | 开启方式                  | 开关位置-关键帧编辑                                | 开关位置-tokenflow合成                             | 备注                                                         |      |
+| ------------------------- | ------------------------- | -------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------ | ---- |
+| feature optimization      | apply_FRESCO_opt()        | ***`pipe_FRESCO.py`***  中line 451处               | ***`pipe_FRESCO.py`***  中line 578处               | 如需关闭，注释掉 apply_FRESCO_opt() 或使用disable_FRESCO_opt() 均可 |      |
+| spatial guided attention  | ctrlr.enable_intraattn()  | ***`pipe_FRESCO.py`***  中line 456处               | ***`pipe_FRESCO.py`***  中line 583处               | 如需关闭，使用 ctrlr.disable_intraattn() 即可。<u>为了适配 loop 模式关键帧，intraattn 的存储机制拓展到了多维， ***ctrlr*** 中存有多组 intraattn 数据；如需保留存放的数据以便后续继续使用，则 ctrlr.disable_intraattn() 以及 ctrlr.enable_intraattn() 的参数中设置 ***reset=False***</u>。如需开启，须指明当前数据的组号，即设置 ***group_ind*** |      |
+| cross frame attetion      | ctrlr.enable_cfattn()     | ***`pipe_FRESCO.py`***  中未使用，推荐在line 459处 | ***`pipe_FRESCO.py`***  中未使用，推荐在line 586处 | 如需关闭，使用ctrlr.disable_cfattn() 即可                    |      |
+| temporal guided attention | ctrlr.enable_interattn()  | ***`pipe_FRESCO.py`***  中line 458处               | ***`pipe_FRESCO.py`***  中line 585处               | 如需关闭，使用 ctrlr.disable_interattn() 即可                |      |
+| attention 统一开关        | ctrlr.enable_controller() | ***`pipe_FRESCO.py`***  中line 450处               | ***`pipe_FRESCO.py`***  中line 577处               | 如需关闭，使用 ctrlr.disable_controller() 即可。<u>注意intraattn相关参数的设置</u> |      |
 
-1. Clone the repository. 
+### 关于新增的辅助脚本
 
-```shell
-git clone https://github.com/williamyang1991/FRESCO.git
-cd FRESCO
-```
-
-2. You can simply set up the environment with pip based on [requirements.txt](https://github.com/williamyang1991/FRESCO/blob/main/requirements.txt)
-    - Create a conda environment and install torch >= 2.0.0. Here is an example script to install torch 2.0.0 + CUDA 11.8 :
-    ```
-    conda create --name diffusers python==3.8.5
-    conda activate diffusers
-    pip install torch==2.0.0 torchvision==0.15.1 --index-url https://download.pytorch.org/whl/cu118
-    ```
-    - Run `pip install -r requirements.txt` in an environment where torch is installed.
-    - We have tested on torch 2.0.0/2.1.0 and diffusers 0.19.3
-    - If you use new versions of diffusers, you need to modify [my_forward()](https://github.com/williamyang1991/FRESCO/blob/fb991262615665de88f7a8f2cc903d9539e1b234/src/diffusion_hacked.py#L496)
-
-3. Run the installation script. The required models will be downloaded in `./model`, `./src/ControlNet/annotator` and `./src/ebsynth/deps/ebsynth/bin`.
-    - Requires access to huggingface.co
-
-```shell
-python install.py
-```
-
-4. You can run the demo with `run_fresco.py`
-
-```shell
-python run_fresco.py ./config/config_music.yaml
-```
-
-5. For issues with Ebsynth, please refer to [issues](https://github.com/williamyang1991/Rerender_A_Video#issues)
-
-
-## (1) Inference
-
-### WebUI (recommended)
-
-```
-python webUI.py
-```
-The Gradio app also allows you to flexibly change the inference options. Just try it for more details. 
-
-Upload your video, input the prompt, select the model and seed, and hit:
-- **Run Key Frames**: detect keyframes, translate all keyframes.
-- **Run Propagation**: propagate the keyframes to other frames for full video translation
-- **Run All**: **Run Key Frames** and **Run Propagation**
-
-Select the model:
-- **Base model**: base Stable Diffusion model (SD 1.5)
-    - Stable Diffusion 1.5: official model
-    - [rev-Animated](https://huggingface.co/stablediffusionapi/rev-animated): a semi-realistic (2.5D) model
-    - [realistic-Vision](https://huggingface.co/SG161222/Realistic_Vision_V2.0): a photo-realistic model
-    - [flat2d-animerge](https://huggingface.co/stablediffusionapi/flat-2d-animerge): a cartoon model
-    - You can add other models on huggingface.co by modifying this [line](https://github.com/williamyang1991/FRESCO/blob/1afcca9c7b1bc1ac68254f900be9bd768fbb6988/webUI.py#L362) 
-   
-![overview](https://github.com/williamyang1991/FRESCO/assets/18130694/6ce5d54e-b020-4e43-95e7-72ab1783f482)
-
-We provide abundant advanced options to play with
-
-</details>
-
-<details id="option1">
-<summary> <b>Advanced options for single frame processing</b></summary>
-
-1. **Frame resolution**: resize the short side of the video to 512.
-2. ControlNet related:
-   - **ControlNet strength**: how well the output matches the input control edges
-   - **Control type**: HED edge, Canny edge, Depth map
-   - **Canny low/high threshold**: low values for more edge details
-3. SDEdit related:
-   - **Denoising strength**: repaint degree (low value to make the output look more like the original video)
-   - **Preserve color**: preserve the color of the original video
-4. SD related:
-   - **Steps**: denoising step
-   - **CFG scale**: how well the output matches the prompt
-   - **Added prompt/Negative prompt**: supplementary prompts
-5. FreeU related:
-   - **FreeU first/second-stage backbone factor**: =1 do nothing; >1 enhance output color and details
-   - **FreeU first/second-stage skip factor**: =1 do nothing; <1 enhance output color and details
-
-</details>
-
-<details id="option2">
-<summary> <b>Advanced options for FRESCO constraints</b></summary>
-
-1. Keyframe related
-   - **Number of frames**: Total frames to be translated
-   - **Number of frames in a batch**: To avoid out-of-memory, use small batch size
-   - **Min keyframe interval (s_min)**: The keyframes will be detected at least every s_min frames
-   - **Max keyframe interval (s_max)**: The keyframes will be detected at most every s_max frames
-2. FRESCO constraints
-   - FRESCO-guided Attention:
-     - **spatial-guided attention**: Check to enable spatial-guided attention
-     - **cross-frame attention**: Check to enable efficient cross-frame attention
-     - **temporal-guided attention**: Check to enable temporal-guided attention
-   - FRESCO-guided optimization:
-     - **spatial-guided optimization**: Check to enable spatial-guided optimization
-     - **temporal-guided optimization**: Check to enable temporal-guided optimization
-3. **Background smoothing**: Check to enable background smoothing (best for static background)
-   
-</details>
-
-<details id="option3">
-<summary> <b>Advanced options for the full video translation</b></summary>
-
-1. **Gradient blending**: apply Poisson Blending to reduce ghosting artifacts. May slow the process and increase flickers.
-2. **Number of parallel processes**: multiprocessing to speed up the process. Large value (4) is recommended.
-</details>
-
-![option](https://github.com/williamyang1991/FRESCO/assets/18130694/72600758-1dff-4b7c-8f3f-65ee3909f8f6)
-
-### Command Line
-
-We provide a flexible script `run_fresco.py` to run our method.
-
-Set the options via a config file. For example,
-```shell
-python run_fresco.py ./config/config_music.yaml
-```
-We provide some examples of the config in `config` directory.
-Most options in the config is the same as those in WebUI.
-Please check the explanations in the WebUI section.
-
-We provide a separate Ebsynth python script `video_blend.py` with the temporal blending algorithm introduced in
-[Stylizing Video by Example](https://dcgi.fel.cvut.cz/home/sykorad/ebsynth.html) for interpolating style between key frames.
-It can work on your own stylized key frames independently of our FRESCO algorithm.
-
-```python
-video_blend.py [-h] [--output OUTPUT] [--fps FPS] [--key_ind KEY_IND [KEY_IND ...]] [--key KEY] [--n_proc N_PROC] [-ps] [-ne] [-tmp] name
-
-positional arguments:
-  name                  Path to input video
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --output OUTPUT       Path to output video
-  --fps FPS             The FPS of output video
-  --key_ind KEY_IND [KEY_IND ...]
-                        key frame index
-  --key KEY             The subfolder name of stylized key frames
-  --n_proc N_PROC       The max process count
-  -ps                   Use poisson gradient blending
-  -ne                   Do not run ebsynth (use previous ebsynth output)
-  -tmp                  Keep temporary output
-```
-An example
-```
-python video_blend.py ./output/dog/ --key keys --key_ind 0 11 23 33 49 60 72 82 93 106 120 137 151 170 182 193 213 228 238 252 262 288 299  --output ./output/dog/blend.mp4 --fps 24 --n_proc 4 -ps
-```
-
-For the details, please refer to our previous work [Rerender-A-Video](https://github.com/williamyang1991/Rerender_A_Video/tree/main?tab=readme-ov-file#our-ebsynth-implementation) (The mainly difference is the way of specifying key frame index)
-
-## (2) Results
-
-### Key frame translation
-
-<table class="center">
-<tr>
-  <td><img src="https://github.com/williamyang1991/FRESCO/assets/18130694/e8d5776a-37c5-49ae-8ab4-15669df6f572" raw=true></td>
-  <td><img src="https://github.com/williamyang1991/FRESCO/assets/18130694/8a792af6-555c-4e82-ac1e-5c2e1ee35fdb" raw=true></td>
-  <td><img src="https://github.com/williamyang1991/FRESCO/assets/18130694/10f9a964-85ac-4433-84c5-1611a6c2c434" raw=true></td>
-  <td><img src="https://github.com/williamyang1991/FRESCO/assets/18130694/0ec0fbf9-90dd-4d8b-964d-945b5f6687c2" raw=true></td>
-</tr>
-<tr>
-  <td width=26.5% align="center">a red car turns in the winter</td>
-  <td width=26.5% align="center">an African American boxer wearing black boxing gloves punches towards the camera, cartoon style</td>
-  <td width=26.5% align="center">a cartoon spiderman in black suit, black shoes and white gloves is dancing</td>
-  <td width=20.5% align="center">a beautiful woman holding her glasses in CG style</td>
-</tr>
-</table>
-
-
-### Full video translation
-
-https://github.com/williamyang1991/FRESCO/assets/18130694/bf8bfb82-5cb7-4b2f-8169-cf8dbf408b54
-
-## Citation
-
-If you find this work useful for your research, please consider citing our paper:
-
-```bibtex
-@inproceedings{yang2024fresco,
- title = {FRESCO: Spatial-Temporal Correspondence for Zero-Shot Video Translation},
- author = {Yang, Shuai and Zhou, Yifan and Liu, Ziwei and and Loy, Chen Change},
- booktitle = {CVPR},
- year = {2024},
-}
-```
-
-## Acknowledgments
-
-The code is mainly developed based on [Rerender-A-Video](https://github.com/williamyang1991/Rerender_A_Video), [ControlNet](https://github.com/lllyasviel/ControlNet), [Stable Diffusion](https://github.com/Stability-AI/stablediffusion), [GMFlow](https://github.com/haofeixu/gmflow) and [Ebsynth](https://github.com/jamriska/ebsynth).
-
-
+- ***`test.py`***：相同实验条件下的自动化多视频 config 生成与 ***`run_fresco.py`*** 运行
+- ***`test.sh`***：多种实验条件组合下的自动化多视频 config 生成与 ***`run_fresco.py`*** 运行
+- ***`to_video_multi.py`***：用多个文件夹下的视频帧生成拼接视频。给定的文件夹须包含 `keys` 子文件夹，keys子文件夹内为待合成视频帧
+- ***`auto_eb.py`***：用给定文件夹的 `keys` 子文件夹中的关键帧，以及给定视频，运行ebsynth。关键帧的序号须与视频中的帧序号一致
+- ***`run_fresco.ipynb`***：***`run_fresco.py`*** 的Jupyter参考实现版本

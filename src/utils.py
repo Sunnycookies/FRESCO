@@ -102,16 +102,12 @@ def get_saliency(imgs, sod_model, dilate):
     torch.cuda.empty_cache()
     return saliency
 
-# take from: https://github.com/MichalGeyer/pnp-diffusers   
-# add: load ddim inverion latents for pnp
 def load_source_latents_t(t, latents_path):
     latents_t_path = os.path.join(latents_path, f'noisy_latents_{t}.pt')
     assert os.path.exists(latents_t_path), f'Missing latents at t {t} path {latents_t_path}'
     latents = torch.load(latents_t_path)
     return latents
 
-# take from: https://github.com/MichalGeyer/pnp-diffusers   
-# set t for pnp injection time.
 def register_time(model, t):
     conv_module = model.unet.up_blocks[1].resnets[1]
     setattr(conv_module, 't', t)
@@ -132,4 +128,3 @@ def register_time(model, t):
 
     module = model.unet.mid_block.attentions[0].transformer_blocks[0].attn1
     setattr(module, 't', t)
-

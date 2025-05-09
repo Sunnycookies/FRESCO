@@ -1,6 +1,6 @@
+import os
 import torch
 from typing import Type,Optional, Dict, Any
-
 
 def batch_cosine_sim(x, y):
     if type(x) is list:
@@ -41,7 +41,7 @@ def make_tokenflow_attention_block(block_class: Type[torch.nn.Module], unet_chun
             class_labels=None,
         ) -> torch.Tensor:
 
-            # print("tokenflow_block!")
+            # print("tokenflow blocks!")
             
             batch_size, sequence_length, dim = hidden_states.shape
             n_frames = batch_size // unet_chunk_size
@@ -177,6 +177,8 @@ def make_original_attention_block(block_class: Type[torch.nn.Module]) -> Type[to
             cross_attention_kwargs: Dict[str, Any] = None,
             class_labels: Optional[torch.LongTensor] = None,
         ):
+            # print("original blocks!")
+            
             # Notice that normalization is always applied before the real computation in the following blocks.
             # 1. Self-Attention
             if self.use_ada_layer_norm:
@@ -246,16 +248,11 @@ def make_original_attention_block(block_class: Type[torch.nn.Module]) -> Type[to
 
 def set_tokenflow(
         model: torch.nn.Module,
-        edit_mode = 'pnp'):
+        do_classifier_free_guidance = True):
     """
     Sets the tokenflow attention blocks in a model.
     """
-    if edit_mode == 'pnp':
-        chunk_size = 3
-    elif edit_mode == 'SDEdit':
-        chunk_size = 2
-    else:
-        assert('edit mode not exist.')
+    chunk_size = 3 if do_classifier_free_guidance else 2
 
     for _, module in model.named_modules():
         if isinstance_str(module, "BasicTransformerBlock"):
@@ -270,11 +267,10 @@ def set_tokenflow(
     return model
 
 def deactivate_tokenflow(model: torch.nn.Module):
-    # print("=====entering deactivate_tokenflow=====")
     for _, module in model.named_modules():
         if isinstance_str(module, "BasicTransformerBlock"):
-            make_tokenflow_block_fn = make_original_attention_block 
-            module.__class__ = make_original_attention_block(module.__class__)
+            make_original_block_fn = make_original_attention_block 
+            module.__class__ = make_original_block_fn(module.__class__)
 
             # Something needed for older versions of diffusers
             if not hasattr(module, "use_ada_layer_norm_zero"):

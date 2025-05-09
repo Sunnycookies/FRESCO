@@ -6,7 +6,10 @@
         "control_scales": 1.0,
         "prompt": "A cyberpunk fox in the cyberpunk style",
         "a_prompt": ", RAW photo, subject, (high detailed skin:1.2), 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3",
-        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation"
+        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation",
+        "inv_prompt": "A fox",
+        "mininterv": 2,
+        "maxinterv": 10
     },
     "frozen": {
         "strength": 0.4,
@@ -24,7 +27,10 @@
         "control_scales": 1.0,
         "prompt": "a hamster walking on the piano in cartoon style",
         "a_prompt": ", best quality, extremely detailed",
-        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",
+        "inv_prompt": "A hamster walking on the piano",
+        "mininterv": 5,
+        "maxinterv": 10
     },
     "panther_input": {
         "strength": 0.25,
@@ -33,7 +39,10 @@
         "control_scales": 0.7,
         "prompt": "a black panther in CG style",
         "a_prompt": ", best quality, extremely detailed",
-        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",
+        "inv_prompt": "A black man",
+        "mininterv": 10,
+        "maxinterv": 15
     },
     "sakura_input": {
         "strength": 0.35,
@@ -42,7 +51,10 @@
         "control_scales": 1.0,
         "prompt": "cartoon Haruno Sakura looking in the railway station, flat, 2D",
         "a_prompt": ", best quality, extremely detailed",
-        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",
+        "inv_prompt": "A woman looking in the railway station",
+        "mininterv": 10,
+        "maxinterv": 15
     },
     "music_input": {
         "strength": 0.15,
@@ -51,7 +63,10 @@
         "control_scales": 1.0,
         "prompt": "a beautiful woman with headphones listening to music in CG cyberpunk style, neon",
         "a_prompt": ", best quality, extremely detailed",
-        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",
+        "inv_prompt": "A beautiful woman with headphones listening to music",
+        "mininterv": 4,
+        "maxinterv": 8
     },
     "pool_input": {
         "strength": 0.25,
@@ -60,7 +75,10 @@
         "control_scales": 0.7,
         "prompt": "A woman swimming in the pool in cartoon style.",
         "a_prompt": ", best quality, extremely detailed, under the water",
-        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",
+        "inv_prompt": "A woman swimming in the pool",
+        "mininterv": 4,
+        "maxinterv": 8
     },
     "woman_surf_input": {
         "strength": 0.25,
@@ -114,7 +132,10 @@
         "control_scales": 0.7,
         "prompt": "a red car turns in the winter",
         "a_prompt": ", RAW photo, subject, (high detailed skin:1.2), 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3",
-        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation"
+        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation",
+        "inv_prompt": "A car turns",
+        "mininterv": 5,
+        "maxinterv": 10
     },
     "man_surfing_input": {
         "strength": 0.15,
@@ -123,7 +144,10 @@
         "control_scales": 0.7,
         "prompt": "a man surfing in the sea",
         "a_prompt": ", RAW photo, subject, (high detailed skin:1.2), 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3",
-        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation"
+        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation",
+        "inv_prompt": "A man skiing in the snow",
+        "mininterv": 1,
+        "maxinterv": 1
     },
     "deer_white_input": {
         "strength": 0.25,
@@ -132,7 +156,10 @@
         "control_scales": 1.0,
         "prompt": "a white deer in the snow, cartoon, flat",
         "a_prompt": ", best quality, extremely detailed",
-        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",
+        "inv_prompt": "A deer in the snow",
+        "mininterv": 2,
+        "maxinterv": 2
     },
     "glass_cg_input": {
         "strength": 0.4,
@@ -141,7 +168,10 @@
         "control_scales": 1.0,
         "prompt": "a beautiful woman holding her glasses in CG style",
         "a_prompt": ", best quality, extremely detailed",
-        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",
+        "inv_prompt": "A beautiful woman holding her glasses",
+        "mininterv": 2,
+        "maxinterv": 2
     },
     "cat_white_input": {
         "strength": -1,
@@ -150,7 +180,10 @@
         "control_scales": 1.0,
         "prompt": "a white cat in pink background",
         "a_prompt": ", best quality, extremely detailed",
-        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",
+        "inv_prompt": "A black cat in pink background",
+        "mininterv": 1,
+        "maxinterv": 1
     },
     "fox_greeting_input": {
         "strength": 0.4,
@@ -159,7 +192,10 @@
         "control_scales": 1.0,
         "prompt": "greetings from a fox by shaking front paws",
         "a_prompt": ", RAW photo, subject, (high detailed skin:1.2), 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3",
-        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation"
+        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation",
+        "inv_prompt": "Greetings from a dog by shaking front paws",
+        "mininterv": 2,
+        "maxinterv": 2
     },
     "sand_desert_input": {
         "strength": -1,
@@ -168,7 +204,10 @@
         "control_scales": 1.0,
         "prompt": "shower of sand in desert",
         "a_prompt": ", RAW photo, subject, (high detailed skin:1.2), 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3",
-        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation"
+        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation",
+        "inv_prompt": "Shower of water in waterfall",
+        "mininterv": 1,
+        "maxinterv": 1
     },
     "cat_dog_input": {
         "strength": -1,
@@ -177,7 +216,10 @@
         "control_scales": 0.7,
         "prompt": "A dog in the grass in the sun",
         "a_prompt": ", RAW photo, subject, (high detailed skin:1.2), 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3",
-        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation"
+        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation",
+        "inv_prompt": "A cat in the grass in the sun",
+        "mininterv": 1,
+        "maxinterv": 1
     },
     "boxer_cartoon_input": {
         "strength": 0.25,
@@ -186,7 +228,10 @@
         "control_scales": 0.7,
         "prompt": "A black boxer wearing black boxing gloves punches towards the camera, cartoon style",
         "a_prompt": ", best quality",
-        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",
+        "inv_prompt": "A black boxer wearing black boxing gloves punches towards the camera",
+        "mininterv": 2,
+        "maxinterv": 2
     },
     "woman_cg_input": {
         "strength": -1,
@@ -195,7 +240,10 @@
         "control_scales": 1.0,
         "prompt": "a beautiful barbie girl in CG style",
         "a_prompt": ", best quality, extremely detailed",
-        "n_prompt": "dark face, tan face, longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+        "n_prompt": "dark face, tan face, longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",
+        "inv_prompt": "A beautiful woman",
+        "mininterv": 1,
+        "maxinterv": 1
     },
     "dance_spiderman_input": {
         "strength": 0.15,
@@ -204,7 +252,10 @@
         "control_scales": 0.5,
         "prompt": "a cartoon spiderman in black suit, black shoes and white gloves is dancing",
         "a_prompt": ", best quality, red mask, extremely detailed",
-        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",
+        "inv_prompt": "A man is dancing",
+        "mininterv": 2,
+        "maxinterv": 2
     },
     "gun_input": {
         "strength": 0.0,
@@ -213,7 +264,10 @@
         "control_scales": 0.7,
         "prompt": "A woman raises a gun, golden hair, white pearl necklace, high saturation, high contrast",
         "a_prompt": ", RAW photo, subject, (high detailed skin:1.2), 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3",
-        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation"
+        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation",
+        "inv_prompt": "A woman raises a gun",
+        "mininterv": 5,
+        "maxinterv": 10
     },
     "makima_input": {
         "strength": 0.0,
@@ -222,7 +276,10 @@
         "control_scales": 0.7,
         "prompt": "A red hair girl wearing a white uniform is talking to the camera in the night",
         "a_prompt": ", best quality, red mask, extremely detailed",
-        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",
+        "inv_prompt": "Makima wearing a white uniform is talking to the camera in the night",
+        "mininterv": 5,
+        "maxinterv": 10
     },
     "seal_input": {
         "strength": 0.0,
@@ -231,7 +288,10 @@
         "control_scales": 0.7,
         "prompt": "A blue seal on the beach",
         "a_prompt": ", RAW photo, subject, (high detailed skin:1.2), 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3",
-        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation"
+        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation",
+        "inv_prompt": "A seal on the beach",
+        "mininterv": 5,
+        "maxinterv": 10
     },
     "tiger_input": {
         "strength": 0.0,
@@ -240,7 +300,10 @@
         "control_scales": 0.7,
         "prompt": "A tiger in cartoon style",
         "a_prompt": ", best quality, red mask, extremely detailed",
-        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",
+        "inv_prompt": "A tiger",
+        "mininterv": 5,
+        "maxinterv": 10
     },
     "paladin_input": {
         "strength": 0.0,
@@ -249,7 +312,10 @@
         "control_scales": 0.7,
         "prompt": "A paladin walks in the dark forest carrying a holy sword",
         "a_prompt": ", best quality, red mask, extremely detailed",
-        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality"
+        "n_prompt": "longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",
+        "inv_prompt": "A man walks one the grass carrying a guitar",
+        "mininterv": 5,
+        "maxinterv": 10
     },
     "woman_input": {
         "strength": 0.0,
@@ -258,7 +324,70 @@
         "control_scales": 0.7,
         "prompt": "A beautiful grandma, white hair",
         "a_prompt": ", RAW photo, subject, (high detailed skin:1.2), 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3",
-        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation"
+        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation",
+        "inv_prompt": "A beautiful woman",
+        "mininterv": 10,
+        "maxinterv": 30
+    },
+    "truncated_woman_input": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "stable-diffusion-v1-5/stable-diffusion-v1-5",
+        "control_scales": 0.6,
+        "prompt": "The Mona Lisa, smile, oil painting by Leonardo Da Vinci",
+        "a_prompt": ", RAW photo, subject, (high detailed skin:1.2), 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3",
+        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation",
+        "inv_prompt": "A beautiful woman",
+        "mininterv": 2,
+        "maxinterv": 4
+    },
+    "compressed_woman_input": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "stabilityai/stable-diffusion-2-1-base",
+        "control_scales": 0.6,
+        "prompt": "The Mona Lisa, smile, oil painting by Leonardo Da Vinci",
+        "a_prompt": "",
+        "n_prompt": "",
+        "inv_prompt": "A beautiful woman",
+        "mininterv": 2,
+        "maxinterv": 4
+    },
+    "truncated-woman-32": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "stable-diffusion-v1-5/stable-diffusion-v1-5",
+        "control_scales": 0.6,
+        "prompt": "The Mona Lisa, smile, oil painting by Leonardo Da Vinci",
+        "a_prompt": ", RAW photo, subject, (high detailed skin:1.2), 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3",
+        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation",
+        "inv_prompt": "A beautiful woman",
+        "mininterv": 2,
+        "maxinterv": 4
+    },
+    "truncated-woman-32-sd2.1": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "/mnt/netdisk/kangbr/SR/SeeSR/preset/models/stable-diffusion-2-base",
+        "control_scales": 0.6,
+        "prompt": "a fauvism painting",
+        "a_prompt": "",
+        "n_prompt": "",
+        "inv_prompt": "A beautiful woman",
+        "mininterv": 2,
+        "maxinterv": 4
+    },
+    "larger_truncated-woman-32-sd2.1": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "/mnt/netdisk/kangbr/SR/SeeSR/preset/models/stable-diffusion-2-base",
+        "control_scales": 0.6,
+        "prompt": "The Mona Lisa, smile, oil painting by Leonardo Da Vinci",
+        "a_prompt": ", RAW photo, subject, (high detailed skin:1.2), 8k uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3",
+        "n_prompt": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation",
+        "inv_prompt": "A beautiful woman",
+        "mininterv": 2,
+        "maxinterv": 4
     },
     "bread-80": {
         "strength": 0.0,
@@ -267,7 +396,10 @@
         "control_scales": 0.7,
         "prompt": "an ice sculpture",
         "a_prompt": "",
-        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic"
+        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic",
+        "inv_prompt": "a bread",
+        "mininterv": 2,
+        "maxinterv": 5
     },
     "basketball-man-120": {
         "strength": 0.0,
@@ -276,7 +408,10 @@
         "control_scales": 0.7,
         "prompt": "the milky way, a star wars clone trooper spinning a planet",
         "a_prompt": "",
-        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic"
+        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic",
+        "inv_prompt": "a man spinning a basketball",
+        "mininterv": 5,
+        "maxinterv": 10
     },
     "dog-in-car-200": {
         "strength": 0.0,
@@ -285,7 +420,10 @@
         "control_scales": 0.7,
         "prompt": "Sahara desert, a cheeta looking out the car window",
         "a_prompt": "",
-        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic"
+        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic",
+        "inv_prompt": "a dog looking out the car window",
+        "mininterv": 5,
+        "maxinterv": 10
     },
     "woman-running-120": {
         "strength": 0.0,
@@ -294,7 +432,10 @@
         "control_scales": 0.7,
         "prompt": "a marble sculpture of a woman running",
         "a_prompt": ", Venus de Milo",
-        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic"
+        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic",
+        "inv_prompt": "a woman running",
+        "mininterv": 10,
+        "maxinterv": 15
     },
     "eagle-200": {
         "strength": 0.0,
@@ -303,7 +444,10 @@
         "control_scales": 0.7,
         "prompt": "an origami of an eagle, pink paper art",
         "a_prompt": "",
-        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic"
+        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic",
+        "inv_prompt": "an eagle",
+        "mininterv": 10,
+        "maxinterv": 15
     },
     "wolf-40": {
         "strength": 0.0,
@@ -312,7 +456,10 @@
         "control_scales": 0.7,
         "prompt": "a colorful polygonal illustration of a wolf",
         "a_prompt": "",
-        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic"
+        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic",
+        "inv_prompt": "a wolf",
+        "mininterv": 5,
+        "maxinterv": 5
     },
     "tesla-200": {
         "strength": 0.0,
@@ -321,7 +468,10 @@
         "control_scales": 0.7,
         "prompt": "an ice sculpture of a car",
         "a_prompt": "",
-        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic"
+        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic",
+        "inv_prompt": "a white car on the road",
+        "mininterv": 10,
+        "maxinterv": 15
     },
     "man-56": {
         "strength": 0.0,
@@ -330,7 +480,10 @@
         "control_scales": 0.7,
         "prompt": "a greek marble sculpture",
         "a_prompt": "",
-        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic"
+        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic",
+        "inv_prompt": "a man",
+        "mininterv": 5,
+        "maxinterv": 10
     },
     "cats-88": {
         "strength": 0.0,
@@ -339,6 +492,177 @@
         "control_scales": 0.7,
         "prompt": "colorful crochet kittens",
         "a_prompt": "",
-        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic"
+        "n_prompt": "ugly, blurry, low res, unrealistic, unaesthetic",
+        "inv_prompt": "cats eating",
+        "mininterv": 2,
+        "maxinterv": 5
+    },
+    "3_input": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "/mnt/netdisk/kangbr/SR/SeeSR/preset/models/stable-diffusion-2-base",
+        "control_scales": 0.7,
+        "prompt": "an origami of a stork",
+        "a_prompt": "",
+        "n_prompt": "",
+        "inv_prompt": "a photo of a stork",
+        "mininterv": 1,
+        "maxinterv": 1
+    } ,
+    "fresco_1": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "/mnt/netdisk/kangbr/SR/SeeSR/preset/models/stable-diffusion-2-base",
+        "control_scales": 0.7,
+        "prompt": "a shiny metal sculpture",
+        "a_prompt": "",
+        "n_prompt": "",
+        "inv_prompt": "a bread",
+        "mininterv": 1,
+        "maxinterv": 1
+    },
+    "fresco_2": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "/mnt/netdisk/kangbr/SR/SeeSR/preset/models/stable-diffusion-2-base",
+        "control_scales": 0.7,
+        "prompt": "a rainbow-textured dog",
+        "a_prompt": "",
+        "n_prompt": "",
+        "inv_prompt": "a dog",
+        "mininterv": 1,
+        "maxinterv": 1
+    },
+    "fresco_3": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "/mnt/netdisk/kangbr/SR/SeeSR/preset/models/stable-diffusion-2-base",
+        "control_scales": 0.7,
+        "prompt": "an origami of a stork",
+        "a_prompt": "",
+        "n_prompt": "",
+        "inv_prompt": "a photo of a stork",
+        "mininterv": 1,
+        "maxinterv": 1
+    },
+    "fresco_4": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "/mnt/netdisk/kangbr/SR/SeeSR/preset/models/stable-diffusion-2-base",
+        "control_scales": 0.7,
+        "prompt": "a fluffy wolf doll",
+        "a_prompt": "",
+        "n_prompt": "",
+        "inv_prompt": "a wolf",
+        "mininterv": 1,
+        "maxinterv": 1
+    },
+    "fresco_5": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "/mnt/netdisk/kangbr/SR/SeeSR/preset/models/stable-diffusion-2-base",
+        "control_scales": 0.7,
+        "prompt": "a hamster eats watermelon",
+        "a_prompt": "",
+        "n_prompt": "",
+        "inv_prompt": "a rabbit eats watermelon",
+        "mininterv": 1,
+        "maxinterv": 1
+    },
+    "fresco_6": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "/mnt/netdisk/kangbr/SR/SeeSR/preset/models/stable-diffusion-2-base",
+        "control_scales": 0.7,
+        "prompt": "a man surfing in the sea",
+        "a_prompt": "",
+        "n_prompt": "",
+        "inv_prompt": "A man skiing in the snow",
+        "mininterv": 1,
+        "maxinterv": 1
+    },
+    "fresco_7": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "/mnt/netdisk/kangbr/SR/SeeSR/preset/models/stable-diffusion-2-base",
+        "control_scales": 0.7,
+        "prompt": "sharks",
+        "a_prompt": "",
+        "n_prompt": "",
+        "inv_prompt": "goldfishes",
+        "mininterv": 1,
+        "maxinterv": 1
+    },
+    "fresco_8": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "/mnt/netdisk/kangbr/SR/SeeSR/preset/models/stable-diffusion-2-base",
+        "control_scales": 0.7,
+        "prompt": "a red car turns in the white winter",
+        "a_prompt": "",
+        "n_prompt": "",
+        "inv_prompt": "a car turns",
+        "mininterv": 1,
+        "maxinterv": 1
+    },
+    "fresco_9": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "/mnt/netdisk/kangbr/SR/SeeSR/preset/models/stable-diffusion-2-base",
+        "control_scales": 0.7,
+        "prompt": "submarines",
+        "a_prompt": "",
+        "n_prompt": "",
+        "inv_prompt": "sharks",
+        "mininterv": 1,
+        "maxinterv": 1
+    },
+    "fresco_10": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "/mnt/netdisk/kangbr/SR/SeeSR/preset/models/stable-diffusion-2-base",
+        "control_scales": 0.7,
+        "prompt": "a blutterfly in cartoon style",
+        "a_prompt": "",
+        "n_prompt": "",
+        "inv_prompt": "a blutterfly",
+        "mininterv": 1,
+        "maxinterv": 1
+    },
+    "fresco_11": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "/mnt/netdisk/kangbr/SR/SeeSR/preset/models/stable-diffusion-2-base",
+        "control_scales": 0.7,
+        "prompt": "a clean simple white jade sculpture",
+        "a_prompt": "",
+        "n_prompt": "",
+        "inv_prompt": "a man",
+        "mininterv": 1,
+        "maxinterv": 1
+    },
+    "fresco_12": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "/mnt/netdisk/kangbr/SR/SeeSR/preset/models/stable-diffusion-2-base",
+        "control_scales": 0.7,
+        "prompt": "a cartoon tiger",
+        "a_prompt": "",
+        "n_prompt": "",
+        "inv_prompt": "a tiger",
+        "mininterv": 1,
+        "maxinterv": 1
+    },    
+    "fresco_13": {
+        "strength": 0.0,
+        "control": "hed",
+        "model": "/mnt/netdisk/kangbr/SR/SeeSR/preset/models/stable-diffusion-2-base",
+        "control_scales": 0.7,
+        "prompt": "a swan in chinese ink wash painting, monochrome",
+        "a_prompt": "",
+        "n_prompt": "",
+        "inv_prompt": "a swan",
+        "mininterv": 1,
+        "maxinterv": 1
     }
 }
